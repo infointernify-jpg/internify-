@@ -1,21 +1,170 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- ========================================== -->
+  <!-- 🔴 CRITICAL PAGES - Submit FIRST -->
+  <!-- ========================================== -->
+  
+  <!-- Homepage -->
   <url>
     <loc>https://tryinternify.in/</loc>
-    <lastmod>2026-04-01</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  
+  <!-- Internships Listing -->
   <url>
-    <loc>https://tryinternify.in/community</loc>
-    <lastmod>2026-04-01</lastmod>
+    <loc>https://tryinternify.in/internships</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Sign In -->
+  <url>
+    <loc>https://tryinternify.in/auth/signin</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Register -->
+  <url>
+    <loc>https://tryinternify.in/auth/register</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Internship Detail Pages -->
+  <url>
+    <loc>https://tryinternify.in/internships/9d2d498c-94d1-49b6-b06b-9eeefe369225</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://tryinternify.in/internships/b356ee67-5264-47c4-bd01-cf7f37c58138</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://tryinternify.in/internships/52ac48fb-bbca-4909-ae30-d533efa802c6</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- ========================================== -->
+  <!-- 🟡 HIGH PRIORITY - Submit NEXT -->
+  <!-- ========================================== -->
+  
+  <!-- Saved Internships -->
+  <url>
+    <loc>https://tryinternify.in/saved</loc>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+  
+  <!-- Dashboard -->
+  <url>
+    <loc>https://tryinternify.in/dashboard</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Profile -->
+  <url>
+    <loc>https://tryinternify.in/profile</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Settings -->
+  <url>
+    <loc>https://tryinternify.in/settings</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- ========================================== -->
+  <!-- 🟢 MEDIUM PRIORITY - Submit AFTER -->
+  <!-- ========================================== -->
+  
+  <!-- About Us -->
+  <url>
+    <loc>https://tryinternify.in/about</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Contact -->
+  <url>
+    <loc>https://tryinternify.in/contact</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Mission -->
   <url>
     <loc>https://tryinternify.in/mission</loc>
-    <lastmod>2026-04-01</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.5</priority>
   </url>
+  
+  <!-- Resources -->
+  <url>
+    <loc>https://tryinternify.in/resources</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Community -->
+  <url>
+    <loc>https://tryinternify.in/community</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Forgot Password -->
+  <url>
+    <loc>https://tryinternify.in/auth/forgot-password</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <!-- ========================================== -->
+  <!-- ⚫ LOW PRIORITY - Index Later -->
+  <!-- ========================================== -->
+  
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://tryinternify.in/privacy</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <!-- Terms of Service -->
+  <url>
+    <loc>https://tryinternify.in/terms</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
 </urlset>
