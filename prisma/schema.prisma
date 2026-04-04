@@ -45,19 +45,17 @@ model User {
   accounts               Account[]
   applications           Application[]
   certificates           Certification[]
+  comments               Comment[]
   education              Education[]
   employments            Employment[]
   itSkills               ITSkill[]
   internshipApplications InternshipApplication[]
+  likedPosts             Like[]
   notifications          Notification[]
   posts                  Post[]
   projects               Project[]
+  savedPosts             SavedPost[]
   sessions               Session[]
-
-   // ADD THESE LINES:
-  likedPosts    Like[]        // Add this
-  savedPosts    SavedPost[]   // Add this
-  comments      Comment[]     // Add this
 }
 
 model Account {
@@ -217,12 +215,10 @@ model Internship {
   location       String
   duration       String
   paid           Boolean
-  stipendAmount  Int?
   stipendType    String?
   skills         String[]
   perks          String[]
   eligibility    String?
-  applyLink      String?
   openings       Int?
   startDate      DateTime?
   applyBy        DateTime?
@@ -230,6 +226,8 @@ model Internship {
   verified       Boolean                 @default(false)
   createdAt      DateTime                @default(now())
   isTrending     Boolean                 @default(false)
+  applyLink      String?
+  stipendAmount  String?
   applyClicks    ApplyClick[]
   applications   InternshipApplication[]
   views          InternshipView[]
@@ -248,20 +246,18 @@ model InternshipApplication {
 }
 
 model Post {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   title      String
-  slug       String   @unique
+  slug       String      @unique
   content    String?
-  published  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  orderIndex Int      @default(0)
+  published  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  orderIndex Int         @default(0)
   authorId   String
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-// ADD THESE LINES:
-  likes      Like[]        // Add this
-  savedBy    SavedPost[]   // Add this
-  comments   Comment[]     // Add this
+  comments   Comment[]
+  likes      Like[]
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  savedBy    SavedPost[]
 }
 
 model SystemStat {
@@ -282,12 +278,12 @@ model CareerResource {
   content    String?
   category   String
   coverImage String?
-  fileurl    String?
-  link       String?
-  type       String?  @default("text")
   published  Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  fileurl    String?
+  link       String?
+  type       String?  @default("text")
 }
 
 model InternshipView {
@@ -311,17 +307,17 @@ model Visitor {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   email     String
   userType  String
   subject   String
   message   String
   company   String?
-  createdAt DateTime @default(now())
-  status    String   @default("NEW")
-  repliedAt DateTime?
+  createdAt DateTime  @default(now())
+  status    String    @default("NEW")
   reply     String?
+  repliedAt DateTime?
 }
 
 model Admin {
@@ -338,9 +334,9 @@ model Notification {
   title     String
   message   String
   type      String
-  link      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  link      String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -352,9 +348,8 @@ model Like {
   postId    String
   userId    String
   createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
 }
@@ -364,9 +359,8 @@ model SavedPost {
   postId    String
   userId    String
   createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
 }
@@ -378,7 +372,6 @@ model Comment {
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
