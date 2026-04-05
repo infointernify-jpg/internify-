@@ -12,15 +12,13 @@ import {
 } from "lucide-react";
 import CompanyLogo from "@/components/CompanyLogo";
 
-// ✅ ULTRA SIMPLE FIX - Just return whatever is in the database
+// ✅ Metadata is now handled by a separate metadata export
+// Since this is a client component, metadata needs to be in a separate file
+// But we'll add a Head component for dynamic titles
+
 function formatStipendDetail(amount: string | number | null | undefined, isPaid: boolean): string {
-  // If marked as unpaid
   if (!isPaid) return "Unpaid";
-  
-  // Handle empty amount
   if (!amount) return "Not specified";
-  
-  // JUST RETURN THE ORIGINAL STRING - NO PARSING!
   return String(amount);
 }
 
@@ -30,6 +28,19 @@ export default function InternshipDetailPage({ params }: { params: { id: string 
   const [error, setError] = useState(false);
   const router = useRouter();
   const id = params.id;
+
+  // Update page title dynamically when job loads
+  useEffect(() => {
+    if (job && job.title && job.company) {
+      document.title = `${job.title} at ${job.company} | Internify`;
+      // Update meta description
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        const description = job.description?.substring(0, 160) || `Apply for ${job.title} internship at ${job.company}. ${job.location} • ${job.duration}`;
+        metaDesc.setAttribute('content', description);
+      }
+    }
+  }, [job]);
 
   useEffect(() => {
     async function fetchJob() {
@@ -220,7 +231,6 @@ export default function InternshipDetailPage({ params }: { params: { id: string 
                   <p className="font-medium text-gray-900">{job.duration || "Not specified"}</p>
                 </div>
                 
-                {/* ✅ FIXED: Stipend display - just shows the original string */}
                 <div>
                   <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
                     <Wallet size={12} />
@@ -387,6 +397,14 @@ export default function InternshipDetailPage({ params }: { params: { id: string 
                 <Share2 size={14} />
                 Copy Link
               </button>
+            </div>
+
+            {/* Similar Internships Section - SEO & User Experience */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Similar Internships</h3>
+              <p className="text-xs text-gray-500 text-center py-4">
+                More opportunities coming soon!
+              </p>
             </div>
           </div>
         </div>

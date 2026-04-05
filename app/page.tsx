@@ -12,6 +12,7 @@ import {
   Braces, BarChart3, Palette, Megaphone, Landmark, CheckCircle
 } from "lucide-react";
 import Link from "next/link";
+import { trackEvent } from '@/lib/amplitude';
 
 // Lazy load components that are below the fold
 const HomeTrendingInternships = dynamic(() => import('@/components/TrendingInternships'), {
@@ -32,14 +33,14 @@ const StatsSection = dynamic(() => import('@/components/StatsSection'), {
   ssr: false
 });
 
-// ─── Category Card ─────────────────────────────────────────────────────────
+// ─── Category Card (Links to SEO-friendly URLs) ─────────────────────────────
 const CategoryCard = ({
-  title, subtitle, icon, color, span = "", query,
+  title, subtitle, icon, color, span = "", seoUrl,
 }: {
   title: string; subtitle: string; icon: React.ReactNode;
-  color: string; span?: string; query: string;
+  color: string; span?: string; seoUrl: string;
 }) => (
-  <Link href={`/internships?category=${query}`} className={`group block ${span}`}>
+  <Link href={seoUrl} className={`group block ${span}`}>
     <div className="relative h-full bg-white rounded-2xl p-6 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="relative flex items-start justify-between">
@@ -57,6 +58,20 @@ const CategoryCard = ({
         </div>
       </div>
     </div>
+  </Link>
+);
+
+// ─── City Card Component ─────────────────────────────────────────────────────
+const CityCard = ({ city, count, seoUrl }: { city: string; count: number; seoUrl: string }) => (
+  <Link href={seoUrl} className="bg-white p-4 rounded-xl text-center hover:shadow-lg transition-all border border-slate-200 hover:border-green-300 group">
+    <MapPin size={24} className="mx-auto text-green-500 mb-2 group-hover:scale-110 transition-transform" />
+    <h3 className="font-semibold text-slate-800 text-sm">{city}</h3>
+    {count > 0 ? (
+      <p className="text-xs text-gray-500">{count}+ internships</p>
+    ) : (
+      <p className="text-xs text-gray-400">Explore opportunities</p>
+    )}
+    <p className="text-xs text-blue-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">View →</p>
   </Link>
 );
 
@@ -118,29 +133,71 @@ export default function HomePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
+  const [popularCities, setPopularCities] = useState<any[]>([]);
+  const [loadingCities, setLoadingCities] = useState(true);
 
+  // Track page view
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("config", "G-CZM79LK7MR", {
         page_path: window.location.pathname,
       })
     }
+    
+    trackEvent('Page Viewed', {
+      page: 'homepage',
+      timestamp: new Date().toISOString()
+    });
   }, [])
+
+  // Fetch dynamic city counts
+  useEffect(() => {
+    async function fetchCityCounts() {
+      try {
+        const response = await fetch('/api/city-counts');
+        const data = await response.json();
+        setPopularCities(data);
+      } catch (error) {
+        console.error("Error fetching city counts:", error);
+        // Fallback - show cities without counts
+        const fallbackCities = [
+          "Bangalore", "Mumbai", "Remote", "Delhi NCR", "Pune", "Hyderabad", 
+          "Chennai", "Bhubaneswar", "Kolkata", "Jaipur", "Lucknow", "Ahmedabad"
+        ];
+        setPopularCities(fallbackCities.map(city => ({
+          city: city,
+          count: 0,
+          seoUrl: `/internships/location/${city.toLowerCase().replace(/\s+/g, '')}`
+        })));
+      } finally {
+        setLoadingCities(false);
+      }
+    }
+    fetchCityCounts();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    trackEvent('Search Performed', {
+      query: searchQuery,
+      location: location,
+      timestamp: new Date().toISOString()
+    });
+    
     const params = new URLSearchParams();
-    if (searchQuery.trim()) params.set("q", searchQuery.trim());
-    if (location.trim()) params.set("l", location.trim());
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    if (location.trim()) params.set("location", location.trim());
     router.push(`/internships?${params.toString()}`);
   };
 
+  // Updated: Direct SEO URLs instead of query search
   const quickTags = [
-    { name: "Frontend Dev", icon: <Braces size={14} />, query: "Frontend Dev" },
-    { name: "Data Analyst", icon: <BarChart3 size={14} />, query: "Data Analyst" },
-    { name: "UI/UX Design", icon: <Palette size={14} />, query: "UI/UX Design" },
-    { name: "Marketing", icon: <Megaphone size={14} />, query: "Marketing" },
-    { name: "Finance", icon: <Landmark size={14} />, query: "Finance" },
+    { name: "Frontend Dev", icon: <Braces size={14} />, seoUrl: "/internships/role/software-development" },
+    { name: "Data Analyst", icon: <BarChart3 size={14} />, seoUrl: "/internships/role/data-analyst" },
+    { name: "UI/UX Design", icon: <Palette size={14} />, seoUrl: "/internships/role/ui-ux-design" },
+    { name: "Marketing", icon: <Megaphone size={14} />, seoUrl: "/internships/role/marketing" },
+    { name: "Finance", icon: <Landmark size={14} />, seoUrl: "/internships/role/finance" },
   ];
 
   return (
@@ -149,19 +206,18 @@ export default function HomePage() {
       {/* ─── HEADER ───────────────────────────────────────────────────────────── */}
       <header className="bg-white/95 backdrop-blur-xl sticky top-0 z-50 border-b border-slate-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
-        <Link href="/" className="flex items-center">
-  <Image 
-    src="/Internify.png" 
-    alt="Internify Logo"
-    width={200} 
-    height={45}
-    priority
-  />
-</Link>
+          <Link href="/" className="flex items-center">
+            <Image 
+              src="/Internify.png" 
+              alt="Internify Logo"
+              width={200} 
+              height={45}
+              priority
+            />
+          </Link>
           <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
-            <Link href="/internships" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Browse Internships</Link>
-            <Link href="/about" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">About Us</Link>
-            <Link href="/community" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Community</Link>
+            <Link href="/internships" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Internships</Link>
+            <Link href="/blog" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Blog</Link>
           </nav>
           <div className="flex items-center gap-2">
             {!session ? (
@@ -186,13 +242,12 @@ export default function HomePage() {
             <div className="absolute top-10 right-1/4 w-80 h-80 bg-purple-100/40 rounded-full blur-3xl" />
           </div>
           <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-4 py-1.5 rounded-full mb-6 shadow-sm">
               <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
               🚀 Now Live · Verified Internships Added Daily
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-black text-slate-900 mb-5 tracking-tight leading-[1.08]">
+            <h1 className="relative z-10 text-4xl sm:text-5xl lg:text-[60px] font-black text-slate-900 mb-5 tracking-tight leading-[1.08]">
               Find Internships in India 2026 That{" "}
               <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Actually Hire</span> Students
             </h1>
@@ -240,31 +295,34 @@ export default function HomePage() {
               </button>
             </form>
 
-            {/* Popular Roles with Icons */}
+            {/* Popular Roles with Direct SEO URLs */}
             <div className="flex flex-wrap justify-center items-center gap-2 text-sm">
               <span className="text-slate-600 font-medium">Popular Roles:</span>
               {quickTags.map((tag) => (
-                <button
+                <Link
                   key={tag.name}
-                  onClick={() => router.push(`/internships?q=${encodeURIComponent(tag.query)}`)}
+                  href={tag.seoUrl}
                   className="inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 text-slate-600 px-3 py-1.5 rounded-full font-medium transition-all"
-                  aria-label={`Search ${tag.name} internships`}
+                  aria-label={`Browse ${tag.name} internships`}
                 >
                   {tag.icon}
                   {tag.name}
-                </button>
+                </Link>
               ))}
             </div>
           </div>
         </section>
 
+        {/* Trending Internships Component */}
         <HomeTrendingInternships />
+        
         <HowItWorks />
+        
         <div className="bg-gradient-to-r from-blue-600 to-blue-700">
           <StatsSection />
         </div>
 
-        {/* POPULAR DOMAINS SECTION */}
+        {/* ─── POPULAR DOMAINS SECTION ────────────────────────────────────────── */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mb-8">
             <div>
@@ -275,13 +333,41 @@ export default function HomePage() {
             <Link href="/internships" className="flex items-center gap-1.5 text-blue-600 text-sm font-bold bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-all whitespace-nowrap">View All Internships <ChevronRight size={15} /></Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <CategoryCard title="Software Development" subtitle="Web, Mobile, Backend" icon={<Code className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-blue-500 to-blue-700" span="lg:col-span-2" query="Software" />
-            <CategoryCard title="Data Science & AI" subtitle="Analytics, ML, SQL" icon={<Database className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-indigo-500 to-indigo-700" query="Data" />
-            <CategoryCard title="UI/UX Design" subtitle="UI/UX, Branding, Figma" icon={<PenTool className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-purple-500 to-purple-700" query="Design" />
-            <CategoryCard title="Finance & Accounting" subtitle="Analysis, Accounting" icon={<TrendingUp className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-emerald-500 to-emerald-700" query="Finance" />
-            <CategoryCard title="Digital Marketing" subtitle="Growth, SEO, Content" icon={<Zap className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-orange-500 to-orange-700" query="Marketing" />
-            <CategoryCard title="Business Operations" subtitle="Strategy, Operations" icon={<Building2 className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-slate-500 to-slate-700" query="Operations" />
-            <CategoryCard title="Human Resources" subtitle="Talent, Culture, Recruiting" icon={<Users className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-pink-500 to-pink-700" query="HR" />
+            <CategoryCard title="Software Development" subtitle="Web, Mobile, Backend" icon={<Code className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-blue-500 to-blue-700" span="lg:col-span-2" seoUrl="/internships/role/software-development" />
+            <CategoryCard title="Data Science & AI" subtitle="Analytics, ML, SQL" icon={<Database className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-indigo-500 to-indigo-700" seoUrl="/internships/role/data-analyst" />
+            <CategoryCard title="UI/UX Design" subtitle="UI/UX, Branding, Figma" icon={<PenTool className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-purple-500 to-purple-700" seoUrl="/internships/role/ui-ux-design" />
+            <CategoryCard title="Finance & Accounting" subtitle="Analysis, Accounting" icon={<TrendingUp className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-emerald-500 to-emerald-700" seoUrl="/internships/role/finance" />
+            <CategoryCard title="Digital Marketing" subtitle="Growth, SEO, Content" icon={<Zap className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-orange-500 to-orange-700" seoUrl="/internships/role/marketing" />
+            <CategoryCard title="Business Operations" subtitle="Strategy, Operations" icon={<Building2 className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-slate-500 to-slate-700" seoUrl="/internships/role/business-operations" />
+            <CategoryCard title="Human Resources" subtitle="Talent, Culture, Recruiting" icon={<Users className="w-5 h-5 text-white" />} color="bg-gradient-to-br from-pink-500 to-pink-700" seoUrl="/internships/role/human-resources" />
+          </div>
+        </section>
+
+        {/* ─── POPULAR CITIES SECTION (Dynamic Counts) ────────────────────────── */}
+        <section className="bg-gradient-to-b from-slate-50 to-white py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <p className="text-green-600 text-xs font-bold uppercase tracking-widest mb-1.5">Find Your Location</p>
+              <h2 className="text-3xl font-black text-slate-900">Popular Cities for Internships</h2>
+              <p className="text-slate-600 text-sm mt-1.5 max-w-2xl mx-auto">Discover internship opportunities in your preferred city</p>
+            </div>
+            {loadingCities ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="bg-white p-4 rounded-xl text-center border border-slate-200 animate-pulse">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20 mx-auto mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded w-16 mx-auto"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {popularCities.map((city) => (
+                  <CityCard key={city.city} city={city.city} count={city.count} seoUrl={city.seoUrl} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -324,15 +410,15 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="pt-10 pb-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-8">
               <div className="col-span-2 lg:col-span-4 space-y-3">
-                             <Link href="/" className="flex items-center">
-  <Image 
-    src="/Internify.png" 
-    alt="Internify Logo"
-    width={200} 
-    height={45}
-    priority
-  />
-</Link>
+                <Link href="/" className="flex items-center">
+                  <Image 
+                    src="/Internify.png" 
+                    alt="Internify Logo"
+                    width={200} 
+                    height={45}
+                    priority
+                  />
+                </Link>
                 <p className="text-sm text-slate-800 leading-relaxed max-w-xs">Internify helps students discover genuine internships and connect with verified companies — making the internship search simple, transparent, and completely free.</p>
                 <div className="space-y-2 pt-1">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Follow us on</p>
@@ -352,8 +438,8 @@ export default function HomePage() {
               <div className="lg:col-span-2">
                 <h4 className="text-slate-900 font-bold text-sm mb-4">For Students</h4>
                 <ul className="space-y-2.5 text-sm text-slate-500">
-                  <li><Link href="/internships" className="hover:text-blue-600 transition-colors">Browse Internships</Link></li>
-                  <li><Link href="/internships?mode=Remote" className="hover:text-blue-600 transition-colors">Remote Internships</Link></li>
+                  <li><Link href="/internships" className="hover:text-blue-600 transition-colors">Internships</Link></li>
+                  <li><Link href="/internships/location/remote" className="hover:text-blue-600 transition-colors">Remote Internships</Link></li>
                   <li><Link href="/resources" className="hover:text-blue-600 transition-colors">Career Resources</Link></li>
                 </ul>
               </div>

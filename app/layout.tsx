@@ -40,20 +40,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* 
-          PERFORMANCE OPTIMIZATION 1: Preconnect
-          Establishes early connections to critical third-party origins.
-        */}
+        {/* PERFORMANCE OPTIMIZATION: Preconnect for faster font loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
-        {/* 
-          PERFORMANCE OPTIMIZATION 2: Preload Critical Assets
-          Tells the browser to download your logo immediately as it's above the fold.
-        */}
-        <link rel="preload" href="/Internify.png" as="image" type="image/webp" />
+        {/* PERFORMANCE OPTIMIZATION: Preload Critical Assets */}
+        <link rel="preload" href="/Internify.png" as="image" type="image/png" />
         
-        {/* JSON-LD Schema for SEO (Does not impact performance score) */}
+        {/* JSON-LD Schema for SEO */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -80,11 +74,7 @@ export default function RootLayout({
           </NotificationProvider>
         </Providers>
         
-        {/* 
-          PERFORMANCE OPTIMIZATION 3: Defer Non-Critical JavaScript
-          'strategy="lazyOnload"' moves Google Analytics to load *after* your page is interactive.
-          This directly fixes the "render-blocking requests" issue in Lighthouse.
-        */}
+        {/* Google Analytics - Loads after page is interactive */}
         <Script
           strategy="lazyOnload"
           src="https://www.googletagmanager.com/gtag/js?id=G-CZM79LK7MR"
@@ -98,6 +88,51 @@ export default function RootLayout({
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', 'G-CZM79LK7MR');
+            `,
+          }}
+        />
+        
+        {/* Amplitude Analytics - Product analytics for user behavior tracking */}
+        <Script
+          strategy="lazyOnload"
+          src="https://cdn.amplitude.com/libs/amplitude-8.21.0-min.gz.js"
+        />
+        <Script
+          id="amplitude"
+          strategy="lazyOnload"
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Initialize Amplitude
+              window.amplitude = window.amplitude || {};
+              
+              function initAmplitude() {
+                if (typeof amplitude !== 'undefined') {
+                  amplitude.init('c66e28122c6cfea9315d9422db79a9d5', null, {
+                    defaultTracking: {
+                      pageViews: true,
+                      sessions: true,
+                      formInteractions: true,
+                      fileDownloads: true,
+                      linkClicks: false
+                    }
+                  });
+                  console.log('Amplitude initialized');
+                }
+              }
+              
+              // Wait for script to load
+              if (typeof amplitude !== 'undefined') {
+                initAmplitude();
+              } else {
+                window.addEventListener('load', initAmplitude);
+              }
+              
+              // Track custom events helper
+              window.trackEvent = function(eventName, eventProperties) {
+                if (typeof amplitude !== 'undefined') {
+                  amplitude.track(eventName, eventProperties);
+                }
+              };
             `,
           }}
         />

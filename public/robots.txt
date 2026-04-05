@@ -1,4 +1,6 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
-Sitemap: https://tryinternify.in/sitemap.xml
+
+# Pointing to the new, working sitemap
+Sitemap: https://tryinternify.in/sitemap-new.xml
 Host: https://tryinternify.in
