@@ -127,13 +127,36 @@ const FAQ = () => {
   );
 };
 
+// Define the City interface
+interface City {
+  city: string;
+  count: number;
+  seoUrl: string;
+}
+
+// Fallback cities data
+const FALLBACK_CITIES: City[] = [
+  { city: "Bangalore", count: 0, seoUrl: "/internships/location/bangalore" },
+  { city: "Mumbai", count: 0, seoUrl: "/internships/location/mumbai" },
+  { city: "Remote", count: 0, seoUrl: "/internships/location/remote" },
+  { city: "Delhi NCR", count: 0, seoUrl: "/internships/location/delhi-ncr" },
+  { city: "Pune", count: 0, seoUrl: "/internships/location/pune" },
+  { city: "Hyderabad", count: 0, seoUrl: "/internships/location/hyderabad" },
+  { city: "Chennai", count: 0, seoUrl: "/internships/location/chennai" },
+  { city: "Bhubaneswar", count: 0, seoUrl: "/internships/location/bhubaneswar" },
+  { city: "Kolkata", count: 0, seoUrl: "/internships/location/kolkata" },
+  { city: "Jaipur", count: 0, seoUrl: "/internships/location/jaipur" },
+  { city: "Lucknow", count: 0, seoUrl: "/internships/location/lucknow" },
+  { city: "Ahmedabad", count: 0, seoUrl: "/internships/location/ahmedabad" }
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
-  const [popularCities, setPopularCities] = useState<any[]>([]);
+  const [popularCities, setPopularCities] = useState<City[]>(FALLBACK_CITIES);
   const [loadingCities, setLoadingCities] = useState(true);
 
   // Track page view
@@ -155,24 +178,46 @@ export default function HomePage() {
     async function fetchCityCounts() {
       try {
         const response = await fetch('/api/city-counts');
+        
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
-        setPopularCities(data);
+        
+        // Validate that data is an array
+        if (Array.isArray(data) && data.length > 0) {
+          // Validate each item has required properties
+          const validCities = data.filter((item: any) => 
+            item && typeof item === 'object' && 
+            typeof item.city === 'string' && 
+            typeof item.seoUrl === 'string'
+          ).map((item: any) => ({
+            city: item.city,
+            count: typeof item.count === 'number' ? item.count : 0,
+            seoUrl: item.seoUrl
+          }));
+          
+          if (validCities.length > 0) {
+            setPopularCities(validCities);
+          } else {
+            console.warn("API returned invalid city data, using fallback");
+            setPopularCities(FALLBACK_CITIES);
+          }
+        } else {
+          console.warn("API did not return an array, using fallback data");
+          setPopularCities(FALLBACK_CITIES);
+        }
       } catch (error) {
         console.error("Error fetching city counts:", error);
-        // Fallback - show cities without counts
-        const fallbackCities = [
-          "Bangalore", "Mumbai", "Remote", "Delhi NCR", "Pune", "Hyderabad", 
-          "Chennai", "Bhubaneswar", "Kolkata", "Jaipur", "Lucknow", "Ahmedabad"
-        ];
-        setPopularCities(fallbackCities.map(city => ({
-          city: city,
-          count: 0,
-          seoUrl: `/internships/location/${city.toLowerCase().replace(/\s+/g, '')}`
-        })));
+        // Use fallback data
+        setPopularCities(FALLBACK_CITIES);
       } finally {
         setLoadingCities(false);
       }
     }
+    
     fetchCityCounts();
   }, []);
 
@@ -364,8 +409,8 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {popularCities.map((city) => (
-                  <CityCard key={city.city} city={city.city} count={city.count} seoUrl={city.seoUrl} />
+                {Array.isArray(popularCities) && popularCities.map((city, index) => (
+                  <CityCard key={index} city={city.city} count={city.count} seoUrl={city.seoUrl} />
                 ))}
               </div>
             )}

@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { 
   MapPin, Clock, Wallet, Briefcase, Building2, 
   CheckCircle, ExternalLink, Calendar,
-  ChevronLeft, Globe, Laptop,
+  ChevronLeft, Globe,
   Share2, Bookmark, FileText, Gift, Code
 } from "lucide-react";
-import CompanyLogo from "@/components/CompanyLogo";
 
 function formatStipendDetail(amount: string | number | null | undefined, isPaid: boolean): string {
   if (!isPaid) return "Unpaid";
@@ -18,40 +16,44 @@ function formatStipendDetail(amount: string | number | null | undefined, isPaid:
   return String(amount);
 }
 
-// ✅ Fix: Proper typing for params in App Router
-interface PageProps {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
-export default function InternshipDetailPage({ params }: PageProps) {
+export default function InternshipDetailPage() {
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const router = useRouter();
-  const [id, setId] = useState<string | null>(null);
+  
+  const params = useParams();
+  const id = params?.id as string;
 
-  // ✅ Unwrap params promise
-  useEffect(() => {
-    params.then((resolvedParams) => {
-      setId(resolvedParams.id);
-    });
-  }, [params]);
-
-  // Update page title dynamically when job loads
-  useEffect(() => {
-    if (job && job.title && job.company) {
-      document.title = `${job.title} at ${job.company} | Internify`;
-      // Update meta description
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        const description = job.description?.substring(0, 160) || `Apply for ${job.title} internship at ${job.company}. ${job.location} • ${job.duration}`;
-        metaDesc.setAttribute('content', description);
-      }
+  // Handle share functionality
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy link. Please try again.');
     }
-  }, [job]);
+  };
 
+  // Handle save functionality
+  const handleSave = () => {
+    try {
+      const saved = localStorage.getItem('savedInternships');
+      const savedArray = saved ? JSON.parse(saved) : [];
+      if (!savedArray.includes(job.id)) {
+        savedArray.push(job.id);
+        localStorage.setItem('savedInternships', JSON.stringify(savedArray));
+        alert('Saved to bookmarks!');
+      } else {
+        alert('Already saved!');
+      }
+    } catch (err) {
+      console.error('Failed to save:', err);
+      alert('Failed to save. Please try again.');
+    }
+  };
+
+  // Fetch job data
   useEffect(() => {
     async function fetchJob() {
       if (!id) return;
@@ -73,6 +75,18 @@ export default function InternshipDetailPage({ params }: PageProps) {
 
     fetchJob();
   }, [id]);
+
+  // Update page title dynamically when job loads
+  useEffect(() => {
+    if (job && job.title && job.company) {
+      document.title = `${job.title} at ${job.company} | Internify`;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && job.description) {
+        const description = job.description.substring(0, 160) || `Apply for ${job.title} internship at ${job.company}. ${job.location} • ${job.duration}`;
+        metaDesc.setAttribute('content', description);
+      }
+    }
+  }, [job]);
 
   if (loading) {
     return (
@@ -113,6 +127,7 @@ export default function InternshipDetailPage({ params }: PageProps) {
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
               {job.companyLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={job.companyLogo}
                   alt={job.company}
@@ -160,27 +175,14 @@ export default function InternshipDetailPage({ params }: PageProps) {
 
             <div className="flex gap-2">
               <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Link copied to clipboard!');
-                }}
+                onClick={handleShare}
                 className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
                 title="Share"
               >
                 <Share2 size={18} />
               </button>
               <button 
-                onClick={() => {
-                  const saved = localStorage.getItem('savedInternships');
-                  const savedArray = saved ? JSON.parse(saved) : [];
-                  if (!savedArray.includes(job.id)) {
-                    savedArray.push(job.id);
-                    localStorage.setItem('savedInternships', JSON.stringify(savedArray));
-                    alert('Saved to bookmarks!');
-                  } else {
-                    alert('Already saved!');
-                  }
-                }}
+                onClick={handleSave}
                 className="p-2 text-gray-400 hover:text-yellow-600 rounded-full hover:bg-yellow-50 transition-colors"
                 title="Save"
               >
@@ -398,10 +400,7 @@ export default function InternshipDetailPage({ params }: PageProps) {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Share this opportunity</h3>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Link copied to clipboard!');
-                }}
+                onClick={handleShare}
                 className="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 <Share2 size={14} />
@@ -409,7 +408,7 @@ export default function InternshipDetailPage({ params }: PageProps) {
               </button>
             </div>
 
-            {/* Similar Internships Section - SEO & User Experience */}
+            {/* Similar Internships Section */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Similar Internships</h3>
               <p className="text-xs text-gray-500 text-center py-4">
