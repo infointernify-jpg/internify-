@@ -217,6 +217,7 @@ export default function HomePage() {
           </Link>
           <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
             <Link href="/internships" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Internships</Link>
+             <Link href="/community" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Learning Journey</Link>
             <Link href="/blog" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Blog</Link>
           </nav>
           <div className="flex items-center gap-2">

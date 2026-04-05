@@ -26,6 +26,7 @@ export async function GET() {
           company: companies[Math.floor(Math.random() * companies.length)],
           location: cities[Math.floor(Math.random() * cities.length)],
           category: role,
+          internshipType: "Full-time", // Add this field
           workMode: Math.random() > 0.5 ? "Remote" : "On-site",
           description: `Exciting opportunity for a ${role} intern to join our team. Learn from industry experts and work on real projects.`,
           duration: `${Math.floor(Math.random() * 6) + 3} months`,
@@ -51,6 +52,7 @@ export async function GET() {
             company: companies[Math.floor(Math.random() * companies.length)],
             location: city,
             category: role,
+            internshipType: "Full-time", // Add this field
             workMode: city === "Remote" ? "Remote" : "On-site",
             description: `Join our ${city} office as a ${role} intern. Great opportunity!`,
             duration: `${Math.floor(Math.random() * 6) + 3} months`,
@@ -74,6 +76,8 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Fix the error handling too
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
