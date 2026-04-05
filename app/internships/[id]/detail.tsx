@@ -2,12 +2,19 @@ import { getInternshipById } from "@/data/internships"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-export default function InternshipDetailPage({ params }) {
+// ✅ Add proper type for params
+interface PageProps {
+  params: {
+    id: string
+  }
+}
+
+export default function InternshipDetailPage({ params }: PageProps) {
   const { id } = params
   const internship = getInternshipById(id)
   
   if (!internship) {
-    return notFound()
+    notFound()
   }
 
   return (
@@ -41,12 +48,19 @@ export default function InternshipDetailPage({ params }) {
         
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-3">About the Internship</h2>
-          <p className="text-gray-700">{internship.description}</p>
+          <p className="text-gray-700 whitespace-pre-wrap">{internship.description}</p>
         </div>
         
-        <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
-          Apply Now
-        </button>
+        {internship.applyLink && (
+          <a
+            href={internship.applyLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-center"
+          >
+            Apply Now
+          </a>
+        )}
       </div>
     </div>
   )
