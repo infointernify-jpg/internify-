@@ -12,22 +12,32 @@ import {
 } from "lucide-react";
 import CompanyLogo from "@/components/CompanyLogo";
 
-// ✅ Metadata is now handled by a separate metadata export
-// Since this is a client component, metadata needs to be in a separate file
-// But we'll add a Head component for dynamic titles
-
 function formatStipendDetail(amount: string | number | null | undefined, isPaid: boolean): string {
   if (!isPaid) return "Unpaid";
   if (!amount) return "Not specified";
   return String(amount);
 }
 
-export default function InternshipDetailPage({ params }: { params: { id: string } }) {
+// ✅ Fix: Proper typing for params in App Router
+interface PageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default function InternshipDetailPage({ params }: PageProps) {
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const router = useRouter();
-  const id = params.id;
+  const [id, setId] = useState<string | null>(null);
+
+  // ✅ Unwrap params promise
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setId(resolvedParams.id);
+    });
+  }, [params]);
 
   // Update page title dynamically when job loads
   useEffect(() => {
@@ -44,6 +54,8 @@ export default function InternshipDetailPage({ params }: { params: { id: string 
 
   useEffect(() => {
     async function fetchJob() {
+      if (!id) return;
+      
       try {
         const response = await fetch(`/api/internships/${id}`);
         if (!response.ok) {
@@ -59,9 +71,7 @@ export default function InternshipDetailPage({ params }: { params: { id: string 
       }
     }
 
-    if (id) {
-      fetchJob();
-    }
+    fetchJob();
   }, [id]);
 
   if (loading) {
