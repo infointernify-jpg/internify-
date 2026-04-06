@@ -12,7 +12,6 @@ import {
   Braces, BarChart3, Palette, Megaphone, Landmark, CheckCircle
 } from "lucide-react";
 import Link from "next/link";
-import { trackEvent } from '@/lib/amplitude';
 
 // Lazy load components that are below the fold
 const HomeTrendingInternships = dynamic(() => import('@/components/TrendingInternships'), {
@@ -159,18 +158,13 @@ export default function HomePage() {
   const [popularCities, setPopularCities] = useState<City[]>(FALLBACK_CITIES);
   const [loadingCities, setLoadingCities] = useState(true);
 
-  // Track page view
+  // Track page view - Google Analytics only (Amplitude removed)
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("config", "G-CZM79LK7MR", {
         page_path: window.location.pathname,
       })
     }
-    
-    trackEvent('Page Viewed', {
-      page: 'homepage',
-      timestamp: new Date().toISOString()
-    });
   }, [])
 
   // Fetch dynamic city counts
@@ -223,12 +217,6 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    trackEvent('Search Performed', {
-      query: searchQuery,
-      location: location,
-      timestamp: new Date().toISOString()
-    });
     
     const params = new URLSearchParams();
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
