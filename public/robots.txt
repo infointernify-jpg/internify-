@@ -14,4 +14,4 @@ Disallow: /_next/
 Disallow: /static/
 
 # Sitemap location
-Sitemap: https://tryinternify.in/sitemap.xml
+Sitemap: https://tryinternify.in/new_sitemap.xml
