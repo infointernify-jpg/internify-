@@ -60,23 +60,17 @@ const CategoryCard = ({
   </Link>
 );
 
-// ─── City Card Component ─────────────────────────────────────────────────────
-const CityCard = ({ city, count, seoUrl }: { city: string; count: number; seoUrl: string }) => (
+// ─── City Card Component (NO COUNTS) ─────────────────────────────────────────
+const CityCard = ({ city, seoUrl }: { city: string; seoUrl: string }) => (
   <Link href={seoUrl} className="bg-white p-4 rounded-xl text-center hover:shadow-lg transition-all border border-slate-200 hover:border-green-300 group">
     <MapPin size={24} className="mx-auto text-green-500 mb-2 group-hover:scale-110 transition-transform" />
     <h3 className="font-semibold text-slate-800 text-sm">{city}</h3>
-    {count > 0 ? (
-      <p className="text-xs text-gray-500">{count}+ internships</p>
-    ) : (
-      <p className="text-xs text-gray-400">Explore opportunities</p>
-    )}
     <p className="text-xs text-blue-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">View →</p>
   </Link>
 );
 
-// ─── FAQ Component (COMPLETELY RESTRUCTURED) ─────────────────────────────────────────
+// ─── FAQ Component ───────────────────────────────────────────────────────────
 const FAQ = () => {
-  // Structured FAQ with proper hierarchy and expanded content
   const faqs = [
     {
       q: "What is Internify and how does it work?",
@@ -140,7 +134,6 @@ const FAQ = () => {
         </p>
       </div>
       
-      {/* FAQ Index with anchor links for accessibility */}
       <div className="mb-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
         <p className="text-sm font-semibold text-slate-700 mb-3">Jump to a question:</p>
         <div className="flex flex-wrap gap-2">
@@ -156,7 +149,6 @@ const FAQ = () => {
         </div>
       </div>
       
-      {/* Structured FAQ grid with proper semantic headings */}
       <div className="grid md:grid-cols-2 gap-6">
         {faqs.map((faq, idx) => (
           <div 
@@ -180,7 +172,6 @@ const FAQ = () => {
         ))}
       </div>
       
-      {/* Contact CTA for unanswered questions */}
       <div className="mt-10 text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
         <p className="text-slate-700 text-sm">
           Still have questions? <a href="/contact" className="text-blue-600 font-semibold hover:underline">Contact our support team</a> — we typically respond within 24 hours.
@@ -190,27 +181,26 @@ const FAQ = () => {
   );
 };
 
-// Define the City interface
+// Define the City interface (no count)
 interface City {
   city: string;
-  count: number;
   seoUrl: string;
 }
 
-// Fallback cities data with accurate URLs
+// Fallback cities data with accurate URLs (no counts)
 const FALLBACK_CITIES: City[] = [
-  { city: "Bangalore", count: 0, seoUrl: "/internships/location/bangalore" },
-  { city: "Mumbai", count: 0, seoUrl: "/internships/location/mumbai" },
-  { city: "Remote", count: 0, seoUrl: "/internships/location/remote" },
-  { city: "Delhi NCR", count: 0, seoUrl: "/internships/location/delhi-ncr" },
-  { city: "Pune", count: 0, seoUrl: "/internships/location/pune" },
-  { city: "Hyderabad", count: 0, seoUrl: "/internships/location/hyderabad" },
-  { city: "Chennai", count: 0, seoUrl: "/internships/location/chennai" },
-  { city: "Bhubaneswar", count: 0, seoUrl: "/internships/location/bhubaneswar" },
-  { city: "Kolkata", count: 0, seoUrl: "/internships/location/kolkata" },
-  { city: "Jaipur", count: 0, seoUrl: "/internships/location/jaipur" },
-  { city: "Lucknow", count: 0, seoUrl: "/internships/location/lucknow" },
-  { city: "Ahmedabad", count: 0, seoUrl: "/internships/location/ahmedabad" }
+  { city: "Bangalore", seoUrl: "/internships/location/bangalore" },
+  { city: "Mumbai", seoUrl: "/internships/location/mumbai" },
+  { city: "Remote", seoUrl: "/internships/location/remote" },
+  { city: "Delhi NCR", seoUrl: "/internships/location/delhi-ncr" },
+  { city: "Pune", seoUrl: "/internships/location/pune" },
+  { city: "Hyderabad", seoUrl: "/internships/location/hyderabad" },
+  { city: "Chennai", seoUrl: "/internships/location/chennai" },
+  { city: "Bhubaneswar", seoUrl: "/internships/location/bhubaneswar" },
+  { city: "Kolkata", seoUrl: "/internships/location/kolkata" },
+  { city: "Jaipur", seoUrl: "/internships/location/jaipur" },
+  { city: "Lucknow", seoUrl: "/internships/location/lucknow" },
+  { city: "Ahmedabad", seoUrl: "/internships/location/ahmedabad" }
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -272,9 +262,9 @@ export default function HomePage() {
     addFAQSchema();
   }, [])
 
-  // Fetch dynamic city counts
+  // Fetch dynamic city data
   useEffect(() => {
-    async function fetchCityCounts() {
+    async function fetchCityData() {
       try {
         const response = await fetch('/api/city-counts');
         
@@ -291,7 +281,6 @@ export default function HomePage() {
             typeof item.seoUrl === 'string'
           ).map((item: any) => ({
             city: item.city,
-            count: typeof item.count === 'number' ? item.count : 0,
             seoUrl: item.seoUrl
           }));
           
@@ -306,14 +295,14 @@ export default function HomePage() {
           setPopularCities(FALLBACK_CITIES);
         }
       } catch (error) {
-        console.error("Error fetching city counts:", error);
+        console.error("Error fetching city data:", error);
         setPopularCities(FALLBACK_CITIES);
       } finally {
         setLoadingCities(false);
       }
     }
     
-    fetchCityCounts();
+    fetchCityData();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -477,7 +466,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── POPULAR CITIES SECTION (Dynamic Counts) ────────────────────────── */}
+        {/* ─── POPULAR CITIES SECTION (NO COUNTS) ────────────────────────────── */}
         <section className="bg-gradient-to-b from-slate-50 to-white py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
@@ -490,28 +479,27 @@ export default function HomePage() {
                 {[...Array(12)].map((_, i) => (
                   <div key={i} className="bg-white p-4 rounded-xl text-center border border-slate-200 animate-pulse">
                     <div className="w-8 h-8 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20 mx-auto mb-1"></div>
-                    <div className="h-3 bg-gray-200 rounded w-16 mx-auto"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20 mx-auto"></div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {Array.isArray(popularCities) && popularCities.map((city, index) => (
-                  <CityCard key={index} city={city.city} count={city.count} seoUrl={city.seoUrl} />
+                  <CityCard key={index} city={city.city} seoUrl={city.seoUrl} />
                 ))}
               </div>
             )}
           </div>
         </section>
 
-        {/* WHY INTERNIFY SECTION - Updated with specific claims */}
+        {/* WHY INTERNIFY SECTION */}
         <section className="bg-gradient-to-b from-white to-slate-50/80 border-y border-slate-100">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full mb-4">
                 <Sparkles className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">Why 50,000+ Students Trust Us</span>
+                <span className="text-sm font-medium text-blue-700">Why Students Trust Us</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
                 Built for Students. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Powered by Manual Verification.</span>
@@ -537,7 +525,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* RESTRUCTURED FAQ SECTION */}
+        {/* FAQ SECTION */}
         <FAQ />
 
         {/* FOOTER */}
