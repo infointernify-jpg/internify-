@@ -1,237 +1,375 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MapPin, Clock, CheckCircle, Building2, ArrowRight, Flame, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import {
+  MapPin, Clock, IndianRupee, Building2,
+  ChevronRight, Sparkles, Eye, Calendar, Briefcase, CheckCircle
+} from "lucide-react";
 
-type Internship = {
+// Types - Updated to match your data structure
+interface Internship {
   id: string;
   title: string;
   company: string;
   location: string;
-  paid: boolean;
   stipendAmount?: string | null;
+  duration: string;
+  skills: string[];
+  postedAt: string;
+  isActivelyHiring: boolean;
+  isVerified: boolean;
   companyLogo?: string | null;
-  duration?: string | null;
-  skills?: string[] | null;
-  isTrending?: boolean | null;
-  verified?: boolean | null;
-};
-
-function formatStipend(amount: string | null | undefined): string {
-  if (!amount) return "Not specified";
-  return amount;
+  category: string;
+  description: string;
+  shortDescription?: string | null; // Added shortDescription field
+  workMode: string;
+  createdAt: string;
+  applyLink?: string;
+  published: boolean;
 }
 
-export default function HomeTrendingInternships() {
+// Helper function to get company initials for fallback
+const getCompanyInitials = (company: string) => {
+  if (!company) return "IN";
+  const words = company.split(" ");
+  if (words.length === 1) {
+    return company.substring(0, 2).toUpperCase();
+  }
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
+
+// Helper function to get location display
+const getLocationDisplay = (location: string, workMode: string) => {
+  const cleanLocation = location?.replace(/, India$/, '').replace(/ India$/, '').trim();
+  if (workMode === "Remote") return "Remote";
+  if (workMode === "Hybrid") return `${cleanLocation} (Hybrid)`;
+  return `${cleanLocation} (On-site)`;
+};
+
+// Helper function to format stipend - FIXED: removes duplicate ₹ symbol
+const formatStipend = (stipendAmount: string | null | undefined) => {
+  if (!stipendAmount || stipendAmount === "Not Disclosed" || stipendAmount === "Not disclosed" || stipendAmount === "") {
+    return "Not disclosed";
+  }
+  
+  // Clean the amount
+  let cleanAmount = stipendAmount.replace(/\/month$/, '').replace(/per month$/, '').trim();
+  
+  // Remove any existing ₹ symbol to avoid duplication
+  cleanAmount = cleanAmount.replace(/₹/g, '').trim();
+  
+  // If it's a number, format it
+  if (!isNaN(Number(cleanAmount)) && cleanAmount !== "") {
+    return `₹${Number(cleanAmount).toLocaleString()}/month`;
+  }
+  
+  // Add ₹ symbol and /month
+  return `₹${cleanAmount}/month`;
+};
+
+// Helper function to get description -优先使用 shortDescription
+const getDescription = (job: Internship) => {
+  // First try shortDescription
+  if (job.shortDescription && job.shortDescription !== "") {
+    let cleanText = job.shortDescription;
+    // Remove company name if present at beginning
+    const patterns = [
+      new RegExp(`^${job.company}\\s+(is\\s+)?(hiring|offering|looking for)\\s+`, 'i'),
+      new RegExp(`^${job.company}\\s+`, 'i'),
+    ];
+    for (const pattern of patterns) {
+      cleanText = cleanText.replace(pattern, '');
+    }
+    cleanText = cleanText.replace(/^(A|An)\s+/i, '');
+    cleanText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+    
+    if (cleanText.length > 100) {
+      return cleanText.substring(0, 100) + "...";
+    }
+    return cleanText;
+  }
+  
+  // Fallback to description
+  if (job.description) {
+    let cleanText = job.description;
+    const patterns = [
+      new RegExp(`^${job.company}\\s+(is\\s+)?(hiring|offering|looking for)\\s+`, 'i'),
+      new RegExp(`^${job.company}\\s+`, 'i'),
+    ];
+    for (const pattern of patterns) {
+      cleanText = cleanText.replace(pattern, '');
+    }
+    cleanText = cleanText.replace(/^(A|An)\s+/i, '');
+    cleanText = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+    
+    if (cleanText.length > 100) {
+      return cleanText.substring(0, 100) + "...";
+    }
+    return cleanText;
+  }
+  
+  return "";
+};
+
+// Helper function to format posted date
+const formatPostedDate = (date: string) => {
+  if (!date) return "Recently";
+  const postedDate = new Date(date);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+};
+
+export default function TrendingInternships() {
   const [internships, setInternships] = useState<Internship[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/internships?limit=6&trending=true");
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setInternships(data.slice(0, 6));
-        }
-      } catch (error) {
-        console.error("Error fetching internships:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchData();
+    fetchTrendingInternships();
   }, []);
+
+  const fetchTrendingInternships = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/internships?trending=true&limit=6');
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch internships: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        console.log("First internship data:", data[0]);
+        console.log("Short description:", data[0]?.shortDescription);
+        console.log("Stipend amount:", data[0]?.stipendAmount);
+        setInternships(data);
+      } else {
+        setInternships([]);
+      }
+    } catch (error) {
+      console.error("Error fetching trending internships:", error);
+      setError("Unable to load internships. Please try again later.");
+      setInternships([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImageError = (internshipId: string) => {
+    setImageErrors(prev => ({ ...prev, [internshipId]: true }));
+  };
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="h-72 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl animate-pulse" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-80 bg-white rounded-xl border border-slate-200 animate-pulse">
+              <div className="p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-14 h-14 bg-slate-200 rounded-xl"></div>
+                  <div className="flex-1">
+                    <div className="h-5 bg-slate-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-10 bg-slate-200 rounded"></div>
+                  <div className="h-10 bg-slate-200 rounded"></div>
+                  <div className="h-10 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (internships.length === 0) return null;
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+          <p className="text-red-600">{error}</p>
+          <button 
+            onClick={fetchTrendingInternships}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (internships.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center">
+          <Briefcase size={48} className="text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No internships available</h3>
+          <p className="text-gray-500 text-sm">Check back later for new opportunities.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-8"
-      >
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-full mb-3 border border-blue-100 shadow-sm">
-          <motion.div
-            animate={{ rotate: [0, 20, -20, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {internships.slice(0, 6).map((job) => (
+          <div
+            key={job.id}
+            className="group bg-white rounded-2xl border border-slate-200/60 hover:shadow-2xl hover:shadow-slate-200/50 hover:border-[#0A2540]/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full"
           >
-            <Sparkles className="w-4 h-4 text-blue-600" />
-          </motion.div>
-          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-1.5">Trending now</p>
-        </div>
-        <h2 className="text-3xl font-black text-slate-900">Popular Internships</h2>
-        <p className="text-slate-600 text-sm mt-1.5">Most sought opportunities this week</p>
-      </motion.div>
+            <div className="h-1 bg-gradient-to-r from-[#0A2540] via-[#10B981] to-[#0A2540] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-
-      {/* Horizontal Scrolling Carousel */}
-      <div className="relative overflow-hidden">
-        <motion.div
-          className="flex gap-5"
-          animate={{ x: ["0%", "-100%"] }}
-          transition={{
-            duration: 30,
-            ease: "linear",
-            repeat: Infinity,
-          }}
-        >
-          {/* Display cards only once */}
-          {internships.map((item, index) => (
-            <motion.div
-              key={item.id}
-              className="flex-shrink-0 w-80"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.08,
-              }}
-              whileHover={{ y: -8 }}
-            >
-              <Link href={`/internships/${item.id}`} className="block group h-full">
-                <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 p-6 hover:shadow-xl hover:border-blue-300 transition-all duration-300 h-full flex flex-col bg-gradient-to-br from-white to-gray-50/50">
-                  
-                  {/* Trending Badge */}
-                  {item.isTrending && (
-                    <motion.div
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ delay: 0.3 + index * 0.08, type: "spring" }}
-                      className="absolute top-3 right-3 z-10"
-                    >
-                      <span className="flex items-center gap-1 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-1 rounded-full shadow-lg">
-                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                          <Flame className="w-3 h-3" />
-                        </motion.div>
-                        Hot
-                      </span>
-                    </motion.div>
-                  )}
-
-                  {/* Logo */}
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl flex items-center justify-center mb-3 border border-blue-100 shadow-sm">
-                    {item.companyLogo ? (
+            <div className="p-5 flex-1 flex flex-col">
+              {/* Header with Company Logo */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-shrink-0">
+                  {!imageErrors[job.id] && job.companyLogo && job.companyLogo !== "" ? (
+                    <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-200 overflow-hidden group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
                       <img
-                        src={item.companyLogo}
-                        alt={item.company}
+                        src={job.companyLogo}
+                        alt={`${job.company} logo`}
+                        className="w-10 h-10 object-contain"
                         loading="lazy"
-                        className="w-7 h-7 object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
+                        onError={() => handleImageError(job.id)}
                       />
-                    ) : (
-                      <Building2 className="w-5 h-5 text-blue-400" />
-                    )}
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="font-bold text-base text-gray-900 mb-0.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {item.title}
-                  </h3>
-
-                  {/* Company & Verification */}
-                  <div className="flex items-center gap-1 mb-3">
-                    <span className="text-sm text-gray-600 truncate flex-1">{item.company}</span>
-                    {item.verified && (
-                      <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-                        <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      </motion.div>
-                    )}
-                  </div>
-
-                  {/* Location & Duration */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center gap-1 bg-blue-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium border border-blue-100">
-                      <MapPin className="w-3 h-3 text-blue-500" />
-                      {item.location?.split(",")[0] || "Remote"}
-                    </span>
-                    {item.duration && (
-                      <span className="inline-flex items-center gap-1 bg-purple-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium border border-purple-100">
-                        <Clock className="w-3 h-3 text-purple-500" />
-                        {item.duration}
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#0A2540] to-[#1a3a5c] rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+                      <span className="text-white font-bold text-lg">
+                        {getCompanyInitials(job.company)}
                       </span>
-                    )}
-                  </div>
-
-                  {/* Skills */}
-                  {item.skills && item.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {item.skills.slice(0, 3).map((skill, i) => (
-                        <span
-                          key={i}
-                          className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-medium"
-                        >
-                          {skill}
-                        </span>
-                      ))}
                     </div>
                   )}
+                </div>
 
-                  {/* Spacer */}
-                  <div className="flex-1" />
-
-                  {/* Apply Button */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-auto">
-                    {item.paid && item.stipendAmount ? (
-                      <span className="text-sm font-bold text-green-600">
-                        {formatStipend(item.stipendAmount)}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-[#0A2540] transition-colors line-clamp-1 mb-1">
+                    {job.title}
+                  </h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Building2 size={12} className="text-slate-400" />
+                    <span className="text-xs font-medium text-slate-700">{job.company}</span>
+                    <span className="inline-flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded-full">
+                      <CheckCircle size={10} className="text-green-600" />
+                      <span className="text-[9px] font-medium text-green-700">Verified</span>
+                    </span>
+                    {job.isActivelyHiring && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                        Hiring
                       </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">Unpaid</span>
                     )}
-                    <motion.button
-                      whileHover={{ scale: 1.05, x: 2 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-3 py-1.5 rounded-lg transition-all shadow-sm"
-                    >
-                      Apply
-                      <ArrowRight className="w-3 h-3" />
-                    </motion.button>
                   </div>
                 </div>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
+              </div>
+
+              {/* Key Info Cards - Using stipendAmount with consistent format (FIXED duplicate rupee) */}
+              <div className="space-y-2.5 mb-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MapPin size={13} className="text-emerald-600" />
+                  </div>
+                  <span className="text-xs text-slate-700 font-medium truncate">{getLocationDisplay(job.location, job.workMode)}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Clock size={13} className="text-blue-600" />
+                  </div>
+                  <span className="text-xs text-slate-700 font-medium">{job.duration || "Flexible"}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <IndianRupee size={13} className="text-green-600" />
+                  </div>
+                  <span className="text-xs font-bold text-green-700">
+                    {formatStipend(job.stipendAmount)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description - Uses shortDescription first, then description */}
+              {(job.shortDescription || job.description) && (
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  {getDescription(job)}
+                </p>
+              )}
+
+              {/* Skills Tags */}
+              {job.skills && job.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {job.skills.slice(0, 5).map((skill: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-md"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                  {job.skills.length > 5 && (
+                    <span className="px-2 py-0.5 text-slate-400 text-[10px] font-medium">
+                      +{job.skills.length - 5}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                  <Calendar size={10} />
+                  <span>Posted {formatPostedDate(job.createdAt)}</span>
+                </div>
+                {job.applyLink ? (
+                  <a
+                    href={job.applyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#0A2540] hover:text-[#1a3a5c] transition-colors group/link"
+                  >
+                    <span>Apply</span>
+                    <ChevronRight size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
+                  </a>
+                ) : (
+                  <Link href={`/internships/${job.id}`} className="flex items-center gap-1 text-xs font-semibold text-[#0A2540] hover:text-[#1a3a5c] transition-colors group/link">
+                    <Eye size={12} />
+                    <span>View Details</span>
+                    <ChevronRight size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* View All Link */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.6 }}
-        className="flex justify-center mt-10"
-      >
-        <Link
-          href="/internships"
-          className="inline-flex items-center gap-2 text-blue-600 font-bold bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 px-6 py-3 rounded-full transition-all border border-blue-200 shadow-sm hover:shadow-md"
-        >
-          View all internships
-          <motion.div
-            animate={{ x: [0, 4, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+      {/* View All Button */}
+      {internships.length > 0 && (
+        <div className="flex justify-center mt-10">
+          <Link
+            href="/internships"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-black hover:bg-gray-900 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/30"
           >
-            <ArrowRight className="w-4 h-4" />
-          </motion.div>
-        </Link>
-      </motion.div>
-    </section>
+            View All Finance Internships
+            <ChevronRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
+      )}
+    </div>
   );
-}// Force update - 2026-04-04 18:36:32
-
-// Force rebuild - 2026-04-04 18:44:25
+}

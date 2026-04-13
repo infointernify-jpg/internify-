@@ -20,10 +20,16 @@ const INDIAN_LOCATIONS = [
   "Remote"
 ];
 
-const CATEGORIES = [
-  "Software Development", "Marketing", "Human Resources", "Design", 
-  "Finance", "Data Science", "Sales", "Operations", "Content Writing",
-  "Business Development", "Customer Support", "Product Management"
+// Finance-specific categories
+const FINANCE_CATEGORIES = [
+  { value: "Investment Banking", label: "Investment Banking", tag: "Most Competitive", description: "M&A, IPOs, deal execution" },
+  { value: "Equity Research", label: "Equity Research", tag: "High Demand", description: "Fundamental analysis, sector reports" },
+  { value: "FinTech", label: "FinTech", tag: "Fastest Growing", description: "Payments, lending, trading platforms" },
+  { value: "Financial Analyst", label: "Financial Analyst", tag: "Entry Friendly", description: "FP&A, budgeting, forecasting" },
+  { value: "CA Articleship", label: "CA Articleship", tag: "ICAI Approved", description: "Audit, taxation, compliance" },
+  { value: "Risk & Compliance", label: "Risk & Compliance", tag: "Banking Sector", description: "Credit risk, market risk" },
+  { value: "Corporate Finance", label: "Corporate Finance", tag: "Corporates", description: "Treasury, capital structure" },
+  { value: "Portfolio Management", label: "Portfolio Management", tag: "PMS & AMC", description: "Asset allocation, fund management" }
 ];
 
 const WORK_MODES = ["Remote", "On-site", "Hybrid"];
@@ -31,14 +37,14 @@ const INTERNSHIP_TYPES = ["Full-time", "Part-time", "Virtual"];
 
 // Common company logo URLs for suggestions
 const SUGGESTED_LOGOS = [
-  { name: "Google", url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png" },
-  { name: "Microsoft", url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/1200px-Microsoft_logo.svg.png" },
-  { name: "Amazon", url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1200px-Amazon_logo.svg.png" },
+  { name: "Goldman Sachs", url: "https://logo.clearbit.com/goldmansachs.com" },
+  { name: "Morgan Stanley", url: "https://logo.clearbit.com/morganstanley.com" },
+  { name: "J.P. Morgan", url: "https://logo.clearbit.com/jpmorgan.com" },
   { name: "Razorpay", url: "https://media.glassdoor.com/sqll/1823510/razorpay-squareLogo-1647314500432.png" },
-  { name: "Swiggy", url: "https://media.glassdoor.com/sqll/1133056/swiggy-squareLogo-1620804056253.png" },
-  { name: "Zomato", url: "https://media.glassdoor.com/sqll/1088077/zomato-squareLogo-1620398261803.png" },
-  { name: "Flipkart", url: "https://static.startuptalky.com/2020/06/flipkart-logo-startuptalky.jpg" },
-  { name: "Paytm", url: "https://logodownload.org/wp-content/uploads/2016/08/paytm-logo-1.png" },
+  { name: "Deloitte", url: "https://logo.clearbit.com/deloitte.com" },
+  { name: "EY", url: "https://logo.clearbit.com/ey.com" },
+  { name: "Kotak Mahindra Bank", url: "https://logo.clearbit.com/kotak.com" },
+  { name: "Avendus", url: "https://logo.clearbit.com/avendus.com" },
 ];
 
 export default function PostInternshipPage() {
@@ -189,6 +195,11 @@ export default function PostInternshipPage() {
     setLogoPreview(url);
   };
 
+  const getCategoryTag = (categoryValue: string) => {
+    const category = FINANCE_CATEGORIES.find(c => c.value === categoryValue);
+    return category?.tag || "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -228,12 +239,15 @@ export default function PostInternshipPage() {
     }
   };
 
+  // Get selected category details for display
+  const selectedCategory = FINANCE_CATEGORIES.find(c => c.value === formData.category);
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Post New Internship</h1>
-        <p className="text-gray-500 mt-1">Fill in the details to create a new internship opportunity</p>
+        <h1 className="text-3xl font-bold text-gray-900">Post New Finance Internship</h1>
+        <p className="text-gray-500 mt-1">Fill in the details to create a new internship opportunity in finance</p>
       </div>
 
       {/* Error/Success Messages */}
@@ -268,7 +282,7 @@ export default function PostInternshipPage() {
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="e.g., Frontend Developer Intern"
+                  placeholder="e.g., Investment Banking Analyst Intern"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -282,7 +296,7 @@ export default function PostInternshipPage() {
                   name="company"
                   value={formData.company}
                   onChange={handleChange}
-                  placeholder="e.g., Google"
+                  placeholder="e.g., Goldman Sachs"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -395,7 +409,7 @@ export default function PostInternshipPage() {
                 </div>
               )}
 
-              {/* Suggested Logos (only show for URL method) */}
+              {/* Suggested Logos */}
               {uploadMethod === "url" && (
                 <div className="mt-3">
                   <p className="text-xs font-medium text-gray-600 mb-2">Suggested logos:</p>
@@ -473,7 +487,7 @@ export default function PostInternshipPage() {
             </div>
           </div>
           <div className="p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category <span className="text-red-500">*</span>
@@ -485,11 +499,30 @@ export default function PostInternshipPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="">Select Category</option>
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  <option value="">Select Finance Category</option>
+                  {FINANCE_CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label} - {cat.description}
+                    </option>
                   ))}
                 </select>
+                {selectedCategory && (
+                  <div className="mt-2 inline-flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      selectedCategory.tag === "Most Competitive" ? "bg-red-100 text-red-700" :
+                      selectedCategory.tag === "High Demand" ? "bg-orange-100 text-orange-700" :
+                      selectedCategory.tag === "Fastest Growing" ? "bg-green-100 text-green-700" :
+                      selectedCategory.tag === "Entry Friendly" ? "bg-blue-100 text-blue-700" :
+                      selectedCategory.tag === "ICAI Approved" ? "bg-purple-100 text-purple-700" :
+                      selectedCategory.tag === "Banking Sector" ? "bg-indigo-100 text-indigo-700" :
+                      selectedCategory.tag === "Corporates" ? "bg-cyan-100 text-cyan-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {selectedCategory.tag}
+                    </span>
+                    <span className="text-xs text-gray-500">{selectedCategory.description}</span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -508,6 +541,9 @@ export default function PostInternshipPage() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Internship Type
@@ -524,21 +560,20 @@ export default function PostInternshipPage() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duration <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                placeholder="e.g., 3 months, 6 months"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Duration <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleChange}
+                  placeholder="e.g., 3 months, 6 months"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
             </div>
 
             <div>
@@ -593,7 +628,7 @@ export default function PostInternshipPage() {
                   value={newSkill}
                   onChange={(e) => setNewSkill(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                  placeholder="e.g., React, Node.js, Python"
+                  placeholder="e.g., Financial Modeling, Valuation, Excel"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
@@ -634,7 +669,7 @@ export default function PostInternshipPage() {
                   value={newPerk}
                   onChange={(e) => setNewPerk(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addPerk())}
-                  placeholder="e.g., Certificate, Flexible Hours, Free Meals"
+                  placeholder="e.g., Certificate, PPO, Mentorship"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
@@ -699,7 +734,7 @@ export default function PostInternshipPage() {
                   name="stipendAmount"
                   value={formData.stipendAmount}
                   onChange={handleChange}
-                  placeholder="e.g., 25000"
+                  placeholder="e.g., 50000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

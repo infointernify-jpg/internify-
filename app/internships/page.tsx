@@ -1,572 +1,503 @@
-﻿import { prisma } from "@/lib/prisma";
+﻿"use client";
+
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  MapPin, Clock, Wallet, Briefcase, Building2, 
-  Search, CheckCircle, X, Rocket, SlidersHorizontal,
-  Calendar, Users, Award, TrendingUp, Filter, ChevronRight,
-  Star, Eye, ExternalLink, User, Shield, Zap, Globe,
-  Home, Briefcase as BriefcaseIcon, DollarSign, Tag, Code,
-  ArrowLeft
+import {
+  Search, MapPin, Briefcase, IndianRupee, Filter, X,
+  ChevronRight, Building2, Clock, CheckCircle, ArrowRight,
+  Eye, Calendar, TrendingUp, Shield, Heart, Sparkles, Wallet, Code, Tag
 } from "lucide-react";
-import CompanyLogo from "@/components/CompanyLogo";
+import Header from "../components/Header";
 
-interface PageProps {
-  searchParams: {
-    category?: string;
-    mode?: string;
-    location?: string;
-    type?: string;
-    search?: string;
-  };
-}
+type Internship = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  stipend: string;
+  duration: string;
+  skills: string[];
+  postedAt: string;
+  isActivelyHiring: boolean;
+  isVerified: boolean;
+  logoUrl?: string;
+  companyLogo?: string;
+  category: string;
+  description: string;
+  workMode: string;
+  createdAt: string;
+  applyLink?: string;
+  paid?: boolean;
+  stipendAmount?: string;
+};
 
-export default async function InternshipsPage({ searchParams }: PageProps) {
-  
-  let internships: any[] = [];
-
-  try {
-    const where: any = { published: true };
-    
-    // Category filter
-    if (searchParams.category && searchParams.category !== "All") {
-      where.category = searchParams.category;
-    }
-    
-    // Work mode filter
-    if (searchParams.mode && searchParams.mode !== "All") {
-      where.workMode = searchParams.mode;
-    }
-    
-    // FIXED LOCATION FILTER - More flexible and robust
-    if (searchParams.location && searchParams.location !== "All Locations") {
-      const locationMap: Record<string, string[]> = {
-        "Remote": ["Remote", "Work from Home", "WFH", "Remote - India", "Work From Home", "Remote Work"],
-        "Bangalore": ["Bangalore", "Bengaluru", "Bangalore, India", "Bengaluru, India", "Bangalore Karnataka", "Bengaluru Karnataka"],
-        "Mumbai": ["Mumbai", "Mumbai, India", "Bombay", "Mumbai Maharashtra"],
-        "Delhi": ["Delhi", "New Delhi", "Delhi NCR", "NCR", "Delhi, India", "New Delhi, India"],
-        "Hyderabad": ["Hyderabad", "Hyderabad, India", "Telangana", "Hyderabad Telangana", "Secunderabad"],
-        "Chennai": ["Chennai", "Chennai, India", "Madras", "Chennai Tamil Nadu"],
-        "Pune": ["Pune", "Pune, India", "Poona", "Pune Maharashtra"],
-        "Kolkata": ["Kolkata", "Kolkata, India", "Calcutta", "Kolkata West Bengal"],
-        "Ahmedabad": ["Ahmedabad", "Ahmedabad, India", "Ahmedabad Gujarat"],
-        "Jaipur": ["Jaipur", "Jaipur, India", "Jaipur Rajasthan"],
-        "Lucknow": ["Lucknow", "Lucknow, India", "Lucknow Uttar Pradesh"],
-      };
-      
-      const locationVariants = locationMap[searchParams.location] || [searchParams.location];
-      
-      where.location = {
-        in: locationVariants,
-        mode: 'insensitive'
-      };
-    }
-    
-    // Stipend filter
-    if (searchParams.type === "Paid") {
-      where.stipendAmount = { not: null };
-    }
-    if (searchParams.type === "Unpaid") {
-      where.stipendAmount = null;
-    }
-    
-    // Search filter
-    if (searchParams.search && searchParams.search.trim() !== "") {
-      where.OR = [
-        { title: { contains: searchParams.search, mode: 'insensitive' } },
-        { company: { contains: searchParams.search, mode: 'insensitive' } },
-        { description: { contains: searchParams.search, mode: 'insensitive' } },
-        { skills: { has: searchParams.search } },
-        { location: { contains: searchParams.search, mode: 'insensitive' } }
-      ];
-    }
-
-    internships = await prisma.internship.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-    
-  } catch (error) {
-    console.error("Database error:", error);
-    internships = [];
+// Helper function to get company initials for logo fallback
+const getCompanyInitials = (company: string) => {
+  if (!company) return "IN";
+  const words = company.split(" ");
+  if (words.length === 1) {
+    return company.substring(0, 2).toUpperCase();
   }
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
 
-  const activeFilterCount = Object.values(searchParams).filter(v => v && v !== "All Locations" && v !== "" && v !== "All").length;
-  const totalCompanies = [...new Set(internships.map(i => i.company))].length;
-  const verifiedCount = internships.filter(i => i.verified).length;
+// Helper function to get location display
+const getLocationDisplay = (location: string, workMode: string) => {
+  const cleanLocation = location?.replace(/, India$/, '').replace(/ India$/, '').trim();
+  if (workMode === "Remote") return "Remote";
+  if (workMode === "Hybrid") return `${cleanLocation} (Hybrid)`;
+  return `${cleanLocation} (On-site)`;
+};
+
+// Helper function to get numeric stipend value for filtering
+const getStipendValue = (job: Internship): number => {
+  // Check stipendAmount first
+  if (job.stipendAmount && job.stipendAmount !== "Not Disclosed" && job.stipendAmount !== "") {
+    const num = parseInt(job.stipendAmount);
+    if (!isNaN(num)) return num;
+  }
+  // Check stipend field
+  if (job.stipend && job.stipend !== "Not Disclosed" && job.stipend !== "Not disclosed" && job.stipend !== "") {
+    const num = parseInt(job.stipend);
+    if (!isNaN(num)) return num;
+  }
+  return 0;
+};
+
+// Helper function to format stipend for display
+const formatStipend = (stipend: string, paid?: boolean, stipendAmount?: string) => {
+  if (stipendAmount && stipendAmount !== "Not Disclosed" && stipendAmount !== "") {
+    if (!isNaN(Number(stipendAmount))) {
+      return `₹${Number(stipendAmount).toLocaleString()}/month`;
+    }
+    if (!stipendAmount.includes("₹")) {
+      return `₹${stipendAmount}/month`;
+    }
+    return stipendAmount;
+  }
+  
+  if (stipend && stipend !== "Not Disclosed" && stipend !== "Not disclosed" && stipend !== "") {
+    if (!isNaN(Number(stipend))) {
+      return `₹${Number(stipend).toLocaleString()}/month`;
+    }
+    if (!stipend.includes("₹")) {
+      return `₹${stipend}`;
+    }
+    return stipend;
+  }
+  
+  if (paid === false) {
+    return "Unpaid";
+  }
+  
+  return "Stipend not disclosed";
+};
+
+export default function InternshipsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [allInternships, setAllInternships] = useState<Internship[]>([]);
+  const [filteredInternships, setFilteredInternships] = useState<Internship[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [sortBy, setSortBy] = useState("relevant");
+  
+  const [searchKeyword, setSearchKeyword] = useState(searchParams.get("search") || "");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
+  const [selectedLocation, setSelectedLocation] = useState(searchParams.get("location") || "");
+  const [minStipend, setMinStipend] = useState(0);
+  const [workFromHome, setWorkFromHome] = useState(false);
+  const [partTime, setPartTime] = useState(false);
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
+
+  // Fetch internships on mount
+  useEffect(() => {
+    fetchInternships();
+  }, []);
+
+  // Apply filters whenever filter criteria change
+  useEffect(() => {
+    applyFilters();
+  }, [allInternships, searchKeyword, selectedCategory, selectedLocation, minStipend, workFromHome, partTime, sortBy]);
+
+  const fetchInternships = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/internships`);
+      const data = await res.json();
+      let internshipsData = Array.isArray(data) ? data : [];
+      
+      setAllInternships(internshipsData);
+    } catch (error) {
+      console.error("Error fetching internships:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...allInternships];
+    
+    // Filter by search keyword
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase();
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(keyword) ||
+        job.company.toLowerCase().includes(keyword) ||
+        job.description.toLowerCase().includes(keyword)
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter(job => job.category === selectedCategory);
+    }
+    
+    // Filter by location
+    if (selectedLocation) {
+      filtered = filtered.filter(job => job.location === selectedLocation);
+    }
+    
+    // Filter by minimum stipend - FIXED
+    if (minStipend > 0) {
+      filtered = filtered.filter(job => {
+        const stipendValue = getStipendValue(job);
+        return stipendValue >= minStipend;
+      });
+    }
+    
+    // Filter by work from home
+    if (workFromHome) {
+      filtered = filtered.filter(job => job.workMode === "Remote");
+    }
+    
+    // Filter by part time
+    if (partTime) {
+      filtered = filtered.filter(job => job.internshipType === "Part-time");
+    }
+    
+    // Apply sorting
+    if (sortBy === "newest") {
+      filtered = [...filtered].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (sortBy === "stipend") {
+      filtered = [...filtered].sort((a, b) => {
+        const stipendA = getStipendValue(a);
+        const stipendB = getStipendValue(b);
+        return stipendB - stipendA;
+      });
+    }
+    
+    setFilteredInternships(filtered);
+    setTotalCount(filtered.length);
+  };
+
+  const clearFilters = () => {
+    setSearchKeyword("");
+    setSelectedCategory("");
+    setSelectedLocation("");
+    setMinStipend(0);
+    setWorkFromHome(false);
+    setPartTime(false);
+    setSortBy("relevant");
+    // Update URL without filters
+    router.push("/internships");
+  };
+
+  const handleImageError = (jobId: string) => {
+    setImageErrors(prev => ({ ...prev, [jobId]: true }));
+  };
 
   const categories = [
-    { name: "All", value: "", icon: "🎯", color: "gray", count: internships.length },
-    { name: "Data Analyst", value: "Data Analyst", icon: "📊", color: "blue", count: internships.filter(i => i.category === "Data Analyst").length },
-    { name: "Software", value: "Software", icon: "💻", color: "green", count: internships.filter(i => i.category === "Software").length },
-    { name: "Marketing", value: "Marketing", icon: "📢", color: "purple", count: internships.filter(i => i.category === "Marketing").length },
-    { name: "Finance", value: "Finance", icon: "💰", color: "amber", count: internships.filter(i => i.category === "Finance").length },
-    { name: "Design", value: "Design", icon: "🎨", color: "pink", count: internships.filter(i => i.category === "Design").length },
-    { name: "HR", value: "HR", icon: "👥", color: "indigo", count: internships.filter(i => i.category === "HR").length },
+    "Investment Banking", "Equity Research", "FinTech", "Financial Analyst",
+    "CA Articleship", "Risk & Compliance", "Corporate Finance", "Portfolio Management"
   ];
 
-  const workModes = [
-    { name: "All", value: "", icon: Globe, color: "gray" },
-    { name: "Remote", value: "Remote", icon: Home, color: "green" },
-    { name: "On-site", value: "On-site", icon: Building2, color: "blue" },
-    { name: "Hybrid", value: "Hybrid", icon: Zap, color: "purple" },
-  ];
+  const locations = ["Mumbai", "Bangalore", "Delhi NCR", "Remote", "Pune", "Hyderabad", "Chennai", "Kolkata"];
 
-  const locations = [
-    { name: "All Locations", value: "", icon: "🌍" },
-    { name: "Remote", value: "Remote", icon: "🏠" },
-    { name: "Bangalore", value: "Bangalore", icon: "🏙️" },
-    { name: "Mumbai", value: "Mumbai", icon: "🌆" },
-    { name: "Delhi", value: "Delhi", icon: "🏛️" },
-    { name: "Hyderabad", value: "Hyderabad", icon: "💎" },
-    { name: "Chennai", value: "Chennai", icon: "🏖️" },
-    { name: "Pune", value: "Pune", icon: "📚" },
-    { name: "Kolkata", value: "Kolkata", icon: "🌊" },
-    { name: "Ahmedabad", value: "Ahmedabad", icon: "🏭" },
-    { name: "Jaipur", value: "Jaipur", icon: "🏰" },
-    { name: "Lucknow", value: "Lucknow", icon: "🕌" },
-  ];
-
-  const getFilterUrl = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams as any);
-    if (value === "All" || value === "" || value === "All Locations") {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-    const query = params.toString();
-    return `/internships${query ? `?${query}` : ''}`;
-  };
-
-  const clearFilters = () => "/internships";
-
-  const getColorClasses = (color: string) => {
-    const colors: Record<string, { bg: string; text: string; hover: string; border: string }> = {
-      blue: { bg: "bg-blue-50", text: "text-blue-700", hover: "hover:bg-blue-100", border: "border-blue-200" },
-      green: { bg: "bg-green-50", text: "text-green-700", hover: "hover:bg-green-100", border: "border-green-200" },
-      purple: { bg: "bg-purple-50", text: "text-purple-700", hover: "hover:bg-purple-100", border: "border-purple-200" },
-      amber: { bg: "bg-amber-50", text: "text-amber-700", hover: "hover:bg-amber-100", border: "border-amber-200" },
-      pink: { bg: "bg-pink-50", text: "text-pink-700", hover: "hover:bg-pink-100", border: "border-pink-200" },
-      indigo: { bg: "bg-indigo-50", text: "text-indigo-700", hover: "hover:bg-indigo-100", border: "border-indigo-200" },
-      gray: { bg: "bg-gray-50", text: "text-gray-700", hover: "hover:bg-gray-100", border: "border-gray-200" },
-    };
-    return colors[color] || colors.gray;
-  };
-
-  const truncateDescription = (description: string, maxLength: number = 120) => {
+  const truncateDescription = (description: string, maxLength: number = 100) => {
     if (!description) return "";
     if (description.length <= maxLength) return description;
     return description.substring(0, maxLength) + "...";
   };
 
+  const formatPostedDate = (date: string) => {
+    const postedDate = new Date(date);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="bg-[#F8FAFC] min-h-screen">
+      <Header />
       
-      {/* Hero Section with Back Button Inside */}
-      <div className="relative bg-gradient-to-r from-[#8B6BA3] via-[#BDA6CE] to-[#D4B8E8] text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/5"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full filter blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full filter blur-3xl"></div>
-        
-        {/* Back Button - Positioned at top left inside banner */}
-        <div className="relative max-w-7xl mx-auto px-4 pt-6">
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30 rounded-lg text-white transition-all duration-200 group"
-          >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium">Back to Home</span>
-          </Link>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 pb-16">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Find Your Dream Internship
-            </h1>
-            <p className="text-white/90 text-base md:text-lg max-w-2xl mx-auto mb-8">
-              Launch your career with top companies and exciting opportunities
-            </p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb & Title */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-slate-500 mb-3">
+            <Link href="/" className="hover:text-[#0A2540]">Home</Link>
+            <ChevronRight size={14} />
+            <span className="text-[#0A2540] font-medium">Internships</span>
           </div>
-          
-          <form action="/internships" method="GET" className="max-w-3xl mx-auto">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#BDA6CE] transition-colors" size={20} />
-              <input
-                type="text"
-                name="search"
-                defaultValue={searchParams.search || ''}
-                placeholder="Search by title, company, skills, or location..."
-                className="w-full pl-12 pr-32 py-3.5 bg-white text-gray-900 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#BDA6CE] shadow-lg transition-all"
-              />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-1.5 bg-gradient-to-r from-[#8B6BA3] to-[#BDA6CE] text-white text-sm font-medium rounded-lg hover:from-[#7A5A92] hover:to-[#A896C8] transition shadow-md">
-                Search
-              </button>
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-black text-[#0A2540]">Finance Internships in India</h1>
+              <p className="text-slate-500 text-sm mt-2">Updated daily</p>
             </div>
-          </form>
+            <div className="bg-green-50 px-4 py-2 rounded-full">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle size={12} className="text-green-600" />
+                <span className="text-green-700 text-xs font-medium">All listings manually verified</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex gap-6">
-          
+        {/* NO SIGNUP REMINDER */}
+        <div className="mb-6 bg-gradient-to-r from-[#10B981]/10 to-[#0A2540]/10 rounded-xl p-3 text-center border border-[#10B981]/20">
+          <p className="text-sm font-medium text-[#0A2540]">
+            ✨ Apply instantly — <span className="text-[#10B981] font-bold">no signup required</span>. 100% free for students.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-24 space-y-5">
-              
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Filter size={16} className="text-[#BDA6CE]" />
-                    Filters
-                  </h3>
-                  {activeFilterCount > 0 && (
-                    <Link href={clearFilters()} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                      <X size={12} /> Clear all
-                    </Link>
-                  )}
+          <aside className="lg:w-80 flex-shrink-0">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 sticky top-24">
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="font-bold text-[#0A2540] flex items-center gap-2">
+                  <Filter size={16} /> Filters
+                </h2>
+                <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-600">Clear all</button>
+              </div>
+
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Keyword Search</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    placeholder="e.g. Investment Banking, Mumbai"
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#0A2540]"
+                  />
                 </div>
               </div>
 
-              {/* Category Filter */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Tag size="1rem" className="text-[#BDA6CE]" />
-                    Category
-                  </h3>
-                </div>
-                <div className="p-2 space-y-1">
-                  {categories.map((cat) => {
-                    const colors = getColorClasses(cat.color);
-                    const isActive = (searchParams.category === cat.value) || (cat.value === "" && !searchParams.category);
-                    return (
-                      <Link
-                        key={cat.name}
-                        href={getFilterUrl('category', cat.value)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                          isActive 
-                            ? `${colors.bg} ${colors.text} font-medium shadow-sm` 
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-base">{cat.icon}</span>
-                          <span>{cat.name}</span>
-                        </span>
-                        {cat.count > 0 && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${isActive ? colors.bg + ' bg-opacity-50' : 'bg-gray-100'} text-gray-600`}>
-                            {cat.count}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Profile</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#0A2540]"
+                >
+                  <option value="">All Profiles</option>
+                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
               </div>
 
-              {/* Work Mode Filter */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <BriefcaseIcon size="1rem" className="text-[#BDA6CE]" />
-                    Work Mode
-                  </h3>
-                </div>
-                <div className="p-2 space-y-1">
-                  {workModes.map((mode) => {
-                    const colors = getColorClasses(mode.color);
-                    const isActive = (searchParams.mode === mode.value) || (mode.value === "" && !searchParams.mode);
-                    const Icon = mode.icon;
-                    const count = internships.filter(i => mode.value === "" || i.workMode === mode.value).length;
-                    return (
-                      <Link
-                        key={mode.name}
-                        href={getFilterUrl('mode', mode.value)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                          isActive 
-                            ? `${colors.bg} ${colors.text} font-medium shadow-sm` 
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <Icon size={14} />
-                          <span>{mode.name}</span>
-                        </span>
-                        {count > 0 && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${isActive ? colors.bg + ' bg-opacity-50' : 'bg-gray-100'} text-gray-600`}>
-                            {count}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Location</label>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#0A2540]"
+                >
+                  <option value="">All Locations</option>
+                  {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
               </div>
 
-              {/* Location Filter */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <MapPin size="1rem" className="text-[#BDA6CE]" />
-                    Location
-                  </h3>
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Min Stipend (₹)</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="50000"
+                  step="1000"
+                  value={minStipend}
+                  onChange={(e) => setMinStipend(parseInt(e.target.value))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <span>₹0</span><span>₹10K</span><span>₹20K</span><span>₹30K</span><span>₹40K</span><span>₹50K+</span>
                 </div>
-                <div className="p-2 max-h-64 overflow-y-auto">
-                  {locations.map((loc) => {
-                    const isActive = (searchParams.location === loc.value) || (loc.value === "" && !searchParams.location);
-                    const count = internships.filter(i => {
-                      if (loc.value === "") return true;
-                      if (loc.value === "Remote") {
-                        return i.location?.toLowerCase().includes("remote") || 
-                               i.location?.toLowerCase().includes("work from home") ||
-                               i.location?.toLowerCase().includes("wfh");
-                      }
-                      return i.location?.toLowerCase().includes(loc.value.toLowerCase());
-                    }).length;
-                    return (
-                      <Link
-                        key={loc.name}
-                        href={getFilterUrl('location', loc.value)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                          isActive 
-                            ? 'bg-emerald-50 text-emerald-700 font-medium shadow-sm' 
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{loc.icon}</span>
-                          <span>{loc.name}</span>
-                        </span>
-                        {count > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                            {count}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
+                <p className="text-sm text-[#0A2540] font-semibold mt-2">Min: ₹{minStipend.toLocaleString()}/month</p>
               </div>
 
-              {/* Stipend Filter */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <DollarSign size="1rem" className="text-[#BDA6CE]" />
-                    Stipend
-                  </h3>
-                </div>
-                <div className="p-2 space-y-1">
-                  <Link
-                    href={getFilterUrl('type', 'Paid')}
-                    className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                      searchParams.type === 'Paid'
-                        ? 'bg-amber-50 text-amber-700 font-medium shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>💰</span> Paid Internships
-                    </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                      {internships.filter(i => i.stipendAmount).length}
-                    </span>
-                  </Link>
-                  <Link
-                    href={getFilterUrl('type', 'Unpaid')}
-                    className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                      searchParams.type === 'Unpaid'
-                        ? 'bg-gray-100 text-gray-900 font-medium shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>📝</span> Unpaid Internships
-                    </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                      {internships.filter(i => !i.stipendAmount).length}
-                    </span>
-                  </Link>
-                </div>
+              <div className="space-y-3 mb-5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={workFromHome} onChange={(e) => setWorkFromHome(e.target.checked)} className="w-4 h-4 rounded border-slate-300" />
+                  <span className="text-sm text-slate-600">Work from home</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={partTime} onChange={(e) => setPartTime(e.target.checked)} className="w-4 h-4 rounded border-slate-300" />
+                  <span className="text-sm text-slate-600">Part-time</span>
+                </label>
               </div>
+
+              {(searchKeyword || selectedCategory || selectedLocation || minStipend > 0 || workFromHome || partTime) && (
+                <div className="pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-500 mb-2">Active filters:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {searchKeyword && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">🔍 {searchKeyword}</span>}
+                    {selectedCategory && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">📁 {selectedCategory}</span>}
+                    {selectedLocation && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">📍 {selectedLocation}</span>}
+                    {minStipend > 0 && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">💰 ₹{minStipend}+</span>}
+                    {workFromHome && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">🏠 Work from home</span>}
+                    {partTime && <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">⏰ Part-time</span>}
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
 
-          {/* Main Content */}
+          {/* Internships List */}
           <div className="flex-1">
-            
-            {/* Active Filters Chips */}
-            {activeFilterCount > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-gray-500 font-medium">Active filters:</span>
-                  {searchParams.search && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                      Search: {searchParams.search}
-                      <Link href={getFilterUrl('search', '')} className="hover:text-red-500"><X size={10} /></Link>
-                    </span>
-                  )}
-                  {searchParams.category && (
-                    <Link href={getFilterUrl('category', '')} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full hover:bg-blue-100 transition">
-                      {searchParams.category} <X size={10} />
-                    </Link>
-                  )}
-                  {searchParams.mode && (
-                    <Link href={getFilterUrl('mode', '')} className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full hover:bg-indigo-100 transition">
-                      {searchParams.mode} <X size={10} />
-                    </Link>
-                  )}
-                  {searchParams.location && (
-                    <Link href={getFilterUrl('location', '')} className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full hover:bg-emerald-100 transition">
-                      {searchParams.location} <X size={10} />
-                    </Link>
-                  )}
-                  {searchParams.type && (
-                    <Link href={getFilterUrl('type', '')} className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded-full hover:bg-amber-100 transition">
-                      {searchParams.type} <X size={10} />
-                    </Link>
-                  )}
+            {isLoading ? (
+              <div className="space-y-5">
+                {[1,2,3,4,5].map(i => <div key={i} className="h-48 bg-white rounded-xl border border-slate-200 animate-pulse" />)}
+              </div>
+            ) : filteredInternships.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Briefcase size={32} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#0A2540] mb-2">No internships found</h3>
+                  <p className="text-sm text-slate-500 mb-6">We couldn't find any internships matching your criteria.</p>
+                  <button onClick={clearFilters} className="px-6 py-2.5 bg-[#0A2540] text-white text-sm font-medium rounded-lg hover:bg-[#0d2e52] transition shadow-sm">
+                    Clear all filters
+                  </button>
                 </div>
               </div>
-            )}
+            ) : (
+              <div className="space-y-5">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-slate-500">Showing {filteredInternships.length} internships</p>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-[#0A2540]"
+                  >
+                    <option value="relevant">Sort by: Most Relevant</option>
+                    <option value="newest">Sort by: Newest first</option>
+                    <option value="stipend">Sort by: Highest stipend</option>
+                  </select>
+                </div>
 
-            {/* Results Count */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-500">Showing <span className="font-semibold text-gray-900">{internships.length}</span> opportunities</p>
-            </div>
-
-            {/* Internship Cards */}
-            {internships.length > 0 ? (
-              <div className="space-y-4">
-                {internships.map((job: any) => (
-                  <div key={job.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-[#BDA6CE] transition-all duration-300 overflow-hidden">
+                {filteredInternships.map((job) => (
+                  <div
+                    key={job.id}
+                    onClick={() => window.open(job.applyLink || `/internships/${job.id}`, '_blank')}
+                    className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-[#BDA6CE] transition-all duration-300 overflow-hidden cursor-pointer"
+                  >
                     <div className="p-5">
                       <div className="flex gap-4">
                         {/* Company Logo */}
                         <div className="flex-shrink-0">
-                          <CompanyLogo companyName={job.company} logoUrl={job.companyLogo} size="lg" />
+                          {!imageErrors[job.id] && (job.logoUrl || job.companyLogo) ? (
+                            <div className="rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden w-16 h-16">
+                              <img 
+                                src={job.logoUrl || job.companyLogo}
+                                alt={job.company}
+                                className="object-contain w-12 h-12"
+                                onError={() => handleImageError(job.id)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="rounded-xl bg-gradient-to-br from-[#0A2540] to-[#1a3a5c] flex items-center justify-center w-16 h-16 shadow-sm">
+                              <span className="text-white font-bold text-xl">{getCompanyInitials(job.company)}</span>
+                            </div>
+                          )}
                         </div>
-                        
-                        {/* Main Content */}
+
+                        {/* Content */}
                         <div className="flex-1 min-w-0">
-                          {/* Header with Title and Actions */}
-                          <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                          {/* Title Row */}
+                          <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                             <div className="flex-1">
-                              <Link href={`/internships/${job.id}`}>
-                                <h2 className="text-xl font-bold text-gray-900 group-hover:text-[#BDA6CE] transition-colors">
-                                  {job.title}
-                                </h2>
-                              </Link>
+                              <h2 className="text-xl font-bold text-gray-900 group-hover:text-[#BDA6CE] transition-colors">
+                                {job.title}
+                              </h2>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <span className="text-sm text-gray-600 font-medium">{job.company}</span>
-                                {job.verified && (
+                                {job.isVerified && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                    <CheckCircle size={10} /> Verified
+                                    <CheckCircle size={10} />
+                                    Verified
                                   </span>
                                 )}
-                                {job.isTrending && (
+                                {job.isActivelyHiring && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 text-orange-700 text-xs font-medium rounded-full">
-                                    <TrendingUp size={10} /> Trending
+                                    <TrendingUp size={10} />
+                                    Trending
                                   </span>
                                 )}
                               </div>
                             </div>
-                            
-                            <div className="flex gap-2">
-                              {job.applyLink && (
-                                <a
-                                  href={job.applyLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-5 py-2 bg-gradient-to-r from-[#8B6BA3] to-[#BDA6CE] hover:from-[#7A5A92] hover:to-[#A896C8] text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md"
-                                >
-                                  Apply Now
-                                </a>
-                              )}
-                              <Link
-                                href={`/internships/${job.id}`}
-                                className="px-5 py-2 border-2 border-gray-300 hover:border-[#BDA6CE] text-gray-700 hover:text-[#BDA6CE] text-sm font-semibold rounded-lg transition-all bg-white"
-                              >
-                                Details
-                              </Link>
-                            </div>
+                            <button className="px-5 py-2 bg-gradient-to-r from-[#8B6BA3] to-[#BDA6CE] hover:from-[#7A5A92] hover:to-[#A896C8] text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md whitespace-nowrap">
+                              Apply→
+                            </button>
                           </div>
-                          
-                          {/* Role Description - ONLY 2 LINES */}
-                          {job.description && (
-                            <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed">
-                              {truncateDescription(job.description, 120)}
-                            </p>
-                          )}
-                          
-                          {/* Key Details Grid */}
+
+                          {/* Description */}
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed">
+                            {truncateDescription(job.description, 100)}
+                          </p>
+
+                          {/* Details Row */}
                           <div className="flex flex-wrap gap-4 mb-3">
                             <div className="flex items-center gap-1.5 text-sm text-gray-600">
                               <MapPin size={14} className="text-[#BDA6CE] flex-shrink-0" />
-                              <span>{job.location || "Remote"}</span>
+                              <span>{getLocationDisplay(job.location, job.workMode)}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-sm text-gray-600">
                               <Clock size={14} className="text-[#BDA6CE] flex-shrink-0" />
                               <span>{job.duration || "Flexible"}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-sm">
-                              {job.stipendAmount ? (
-                                <>
-                                  <Wallet size={14} className="text-green-500 flex-shrink-0" />
-                                  <span className="font-semibold text-green-600">{job.stipendAmount}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Wallet size={14} className="text-gray-400 flex-shrink-0" />
-                                  <span className="text-gray-500">Unpaid</span>
-                                </>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                              <Briefcase size={14} className="text-[#BDA6CE] flex-shrink-0" />
-                              <span>{job.workMode || "On-site"}</span>
+                              <Wallet size={14} className="text-green-500 flex-shrink-0" />
+                              <span className={`font-semibold ${job.paid === false ? 'text-gray-500' : 'text-green-600'}`}>
+                                {formatStipend(job.stipend, job.paid, job.stipendAmount)}
+                              </span>
                             </div>
                           </div>
-                          
-                          {/* Skills Tags */}
+
+                          {/* Skills Section */}
                           {job.skills && job.skills.length > 0 && (
-                            <div className="mb-3">
-                              <div className="flex items-center gap-1 mb-1.5">
-                                <Code size={12} className="text-[#BDA6CE]" />
-                                <span className="text-xs font-semibold text-gray-600">Skills</span>
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.skills.slice(0, 8).map((skill: string, i: number) => (
-                                  <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-md font-medium">
-                                    {skill}
-                                  </span>
-                                ))}
-                                {job.skills.length > 8 && (
-                                  <span className="px-2 py-0.5 text-gray-500 text-xs">
-                                    +{job.skills.length - 8} more
-                                  </span>
-                                )}
-                              </div>
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {job.skills.slice(0, 6).map((skill: string, i: number) => (
+                                <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-md font-medium">
+                                  {skill}
+                                </span>
+                              ))}
+                              {job.skills.length > 6 && (
+                                <span className="px-2 py-0.5 text-gray-400 text-xs">
+                                  +{job.skills.length - 6} more
+                                </span>
+                              )}
                             </div>
                           )}
-                          
-                          {/* Footer Info */}
+
+                          {/* Footer Tags */}
                           <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
-                            {job.category && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-md">
-                                <Tag size={10} /> {job.category}
-                              </span>
-                            )}
-                            {job.openings && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded-md">
-                                <Users size={10} /> {job.openings} openings
-                              </span>
-                            )}
-                            {job.createdAt && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-md">
-                                <Calendar size={10} /> Posted {new Date(job.createdAt).toLocaleDateString()}
-                              </span>
-                            )}
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-md">
+                              <Tag size={10} />
+                              {job.category || "Finance"}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-md">
+                              <Calendar size={10} />
+                              Posted {formatPostedDate(job.createdAt)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -574,21 +505,38 @@ export default async function InternshipsPage({ searchParams }: PageProps) {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                <div className="max-w-sm mx-auto">
-                  <Rocket size={48} className="text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No internships found</h3>
-                  <p className="text-sm text-gray-500 mb-4">We couldn't find any internships matching your criteria.</p>
-                  <Link href={clearFilters()} className="px-5 py-2 bg-gradient-to-r from-[#8B6BA3] to-[#BDA6CE] text-white text-sm font-medium rounded-lg hover:from-[#7A5A92] hover:to-[#A896C8] transition shadow-sm inline-block">
-                    Clear all filters
-                  </Link>
-                </div>
-              </div>
             )}
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Stats Section */}
+      <section className="bg-white border-y border-slate-100 mt-12 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-[#0A2540]">Find Your Perfect Finance Internship</h2>
+            <p className="text-slate-500 text-sm mt-2">Browse verified finance internships from top companies</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-[#10B981]">{totalCount}+</p>
+              <p className="text-xs text-slate-500">Active Internships</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#10B981]">50+</p>
+              <p className="text-xs text-slate-500">Companies Hiring</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#10B981]">100%</p>
+              <p className="text-xs text-slate-500">All listings manually verified</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#10B981]">Free</p>
+              <p className="text-xs text-slate-500">Free for students</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

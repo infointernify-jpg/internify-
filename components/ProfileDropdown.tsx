@@ -6,13 +6,9 @@ import { useSession, signOut } from "next-auth/react";
 import { 
   ChevronDown, 
   LogOut, 
-  Settings, 
-  LayoutDashboard,
-  Heart,
   User,
-  HelpCircle,
   Briefcase,
-  Award
+  Heart
 } from "lucide-react";
 import Avatar from "./Avatar";
 
@@ -36,7 +32,7 @@ export default function ProfileDropdown() {
   };
 
   if (status === "loading") {
-    return <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" aria-label="Loading profile"></div>;
+    return <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />;
   }
 
   if (!session) {
@@ -44,154 +40,84 @@ export default function ProfileDropdown() {
   }
 
   const user = session.user as any;
+  const userName = user?.name || "User";
+  const userEmail = user?.email || "";
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Dropdown Toggle Button with ARIA attributes */}
+      {/* Avatar Button with Name */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Open profile menu"
+        aria-label="Profile menu"
         aria-expanded={isOpen}
-        aria-haspopup="true"
-        className="flex items-center gap-2 focus:outline-none hover:bg-white/10 px-3 py-1.5 rounded-xl transition-all duration-200 backdrop-blur-sm group"
+        className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity"
       >
-        <div className="relative">
-          <Avatar user={user} size={34} />
-          {/* Green Live Icon */}
-          <div 
-            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse"
-            aria-label="Online"
-          ></div>
+        <Avatar user={user} size={44} />
+        <div className="hidden md:block text-left">
+          <p className="text-sm font-semibold text-slate-700">{userName.split(" ")[0]}</p>
         </div>
-        <span className="hidden md:block text-sm font-semibold text-gray-800">
-          {user?.name?.split(" ")[0] || "User"}
-        </span>
         <ChevronDown 
           size={14} 
-          className={`text-gray-500 transition-all duration-300 ${isOpen ? "rotate-180" : ""}`}
-          aria-hidden="true"
+          className={`text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           
-          {/* Dropdown positioned further right to prevent cutoff */}
-          <div className="absolute right-0 md:-right-8 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 z-50 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden">
             
-            {/* User Info Section */}
-            <div className="px-4 py-3 bg-gradient-to-br from-blue-500/5 to-purple-500/5">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Avatar user={user} size={38} />
-                  <div 
-                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse"
-                    aria-label="Online"
-                  ></div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {user?.name?.split(" ")[0] || "User"}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <Award size={10} className="text-amber-500" aria-hidden="true" />
-                    <p className="text-[10px] text-gray-500">Member</p>
-                  </div>
-                </div>
-              </div>
+            {/* User Info */}
+            <div className="px-4 py-3 border-b border-slate-100">
+              <p className="text-sm font-semibold text-slate-800 truncate">{userName}</p>
+              {userEmail && (
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userEmail}</p>
+              )}
             </div>
 
             {/* Menu Items */}
-            <div className="py-1" role="menu">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-blue-50 transition-colors"
-                onClick={() => setIsOpen(false)}
-                aria-label="Go to Dashboard"
-                role="menuitem"
-              >
-                <LayoutDashboard size={14} className="text-blue-500" aria-hidden="true" />
-                <span>Dashboard</span>
-              </Link>
-              
+            <div className="py-1">
               <Link
                 href="/dashboard/applications"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-purple-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
                 onClick={() => setIsOpen(false)}
-                aria-label="View your applications"
-                role="menuitem"
               >
-                <Briefcase size={14} className="text-purple-500" aria-hidden="true" />
+                <Briefcase size={14} className="text-slate-400" />
                 <span>My Applications</span>
               </Link>
               
               <Link
                 href="/saved"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-red-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
                 onClick={() => setIsOpen(false)}
-                aria-label="View saved internships"
-                role="menuitem"
               >
-                <Heart size={14} className="text-red-500" aria-hidden="true" />
+                <Heart size={14} className="text-slate-400" />
                 <span>Saved Internships</span>
-              </Link>
-            </div>
-
-            <div className="border-t border-gray-100" aria-hidden="true"></div>
-
-            <div className="py-1" role="menu">
-              <Link
-                href="/profile"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-green-50 transition-colors"
-                onClick={() => setIsOpen(false)}
-                aria-label="View your profile"
-                role="menuitem"
-              >
-                <User size={14} className="text-green-500" aria-hidden="true" />
-                <span>Profile</span>
               </Link>
               
               <Link
-                href="/settings"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                href="/profile"
+                className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
                 onClick={() => setIsOpen(false)}
-                aria-label="Account settings"
-                role="menuitem"
               >
-                <Settings size={14} className="text-gray-500" aria-hidden="true" />
-                <span>Settings</span>
-              </Link>
-
-              <Link
-                href="/help"
-                className="flex items-center gap-3 px-4 py-2 text-xs text-gray-700 hover:bg-yellow-50 transition-colors"
-                onClick={() => setIsOpen(false)}
-                aria-label="Get help and support"
-                role="menuitem"
-              >
-                {/* <HelpCircle size={14} className="text-yellow-500" aria-hidden="true" />
-                <span>Help & Support</span> */}
+                <User size={14} className="text-slate-400" />
+                <span>Profile Settings</span>
               </Link>
             </div>
 
-            <div className="border-t border-gray-100" aria-hidden="true"></div>
-            
-            {/* Sign Out Button */}
-            <div className="p-1.5 bg-gray-50/50">
+            {/* Divider */}
+            <div className="h-px bg-slate-100" />
+
+            {/* Logout */}
+            <div className="py-1">
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                aria-label="Sign out of your account"
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
               >
-                <LogOut size={13} aria-hidden="true" />
-                <span>Sign Out</span>
+                <LogOut size={14} />
+                <span>Logout</span>
               </button>
             </div>
           </div>

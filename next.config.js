@@ -1,11 +1,28 @@
 ﻿/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Generate unique build ID for each deployment
-  generateBuildId: async () => {
-    return `build-${Date.now()}`
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'static.wixstatic.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
+  // Disable caching in development
+  staticPageGenerationTimeout: 0,
   
-  // Add cache control headers
+  // Disable ETag generation
+  generateEtags: false,
+  
+  // Headers to disable caching
   async headers() {
     return [
       {
@@ -13,16 +30,15 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate'
-          }
-        ]
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+          },
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            key: 'Pragma',
+            value: 'no-cache'
+          },
+          {
+            key: 'Expires',
+            value: '0'
           }
         ]
       }
@@ -30,4 +46,4 @@ const nextConfig = {
   }
 }
 
-module.exports = nextConfig
+module.exports = nextConfig;

@@ -1,297 +1,239 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { notFound, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { 
-  MapPin, Clock, Wallet, Briefcase, Building2, 
-  CheckCircle, ExternalLink, Calendar,
-  ChevronLeft, Globe,
-  Share2, Bookmark, FileText, Gift, Code
+import Image from "next/image";
+import {
+  MapPin, Briefcase, IndianRupee, Calendar, Building2,
+  CheckCircle, ArrowLeft, Share2, Heart, Clock,
+  TrendingUp, Shield, Award, ExternalLink, Bookmark
 } from "lucide-react";
+import Header from "@/app/components/Header";
 
-function formatStipendDetail(amount: string | number | null | undefined, isPaid: boolean): string {
-  if (!isPaid) return "Unpaid";
-  if (!amount) return "Not specified";
-  return String(amount);
-}
+type Internship = {
+  id: string;
+  title: string;
+  company: string;
+  companyLogo?: string;
+  location: string;
+  stipend: string;
+  duration: string;
+  description: string;
+  responsibilities: string[];
+  requirements: string[];
+  skills: string[];
+  postedAt: string;
+  deadline: string;
+  isActivelyHiring: boolean;
+  isVerified: boolean;
+  isTrending: boolean;
+  workType: "Remote" | "Hybrid" | "On-site";
+  openings: number;
+};
 
 export default function InternshipDetailPage() {
-  const [job, setJob] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  
   const params = useParams();
-  const id = params?.id as string;
+  const router = useRouter();
+  const [internship, setInternship] = useState<Internship | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
-  // Handle share functionality
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      alert('Failed to copy link. Please try again.');
-    }
-  };
+  const internshipId = params.id as string;
 
-  // Handle save functionality
-  const handleSave = () => {
-    try {
-      const saved = localStorage.getItem('savedInternships');
-      const savedArray = saved ? JSON.parse(saved) : [];
-      if (!savedArray.includes(job.id)) {
-        savedArray.push(job.id);
-        localStorage.setItem('savedInternships', JSON.stringify(savedArray));
-        alert('Saved to bookmarks!');
-      } else {
-        alert('Already saved!');
-      }
-    } catch (err) {
-      console.error('Failed to save:', err);
-      alert('Failed to save. Please try again.');
-    }
-  };
-
-  // Fetch job data
   useEffect(() => {
-    async function fetchJob() {
-      if (!id) return;
-      
+    async function fetchInternship() {
       try {
-        const response = await fetch(`/api/internships/${id}`);
-        if (!response.ok) {
-          throw new Error("Job not found");
-        }
-        const data = await response.json();
-        setJob(data);
-      } catch (err) {
-        console.error("Error fetching job:", err);
-        setError(true);
+        const res = await fetch(`/api/internships/${internshipId}`);
+        if (!res.ok) throw new Error("Internship not found");
+        const data = await res.json();
+        setInternship(data);
+      } catch (error) {
+        console.error("Error fetching internship:", error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
+    fetchInternship();
+  }, [internshipId]);
 
-    fetchJob();
-  }, [id]);
+  const handleApply = () => {
+    router.push(`/internships/${internshipId}/apply`);
+  };
 
-  // Update page title dynamically when job loads
-  useEffect(() => {
-    if (job && job.title && job.company) {
-      document.title = `${job.title} at ${job.company} | Internify`;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc && job.description) {
-        const description = job.description.substring(0, 160) || `Apply for ${job.title} internship at ${job.company}. ${job.location} • ${job.duration}`;
-        metaDesc.setAttribute('content', description);
-      }
-    }
-  }, [job]);
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+    // Save to localStorage or API
+  };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading internship details...</p>
+      <div className="bg-[#F8FAFC] min-h-screen">
+        <Header />
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="h-96 bg-white rounded-xl border border-slate-200 animate-pulse" />
         </div>
       </div>
     );
   }
 
-  if (error || !job) {
-    notFound();
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      
-      {/* Navigation */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-3">
-          <Link 
-            href="/internships" 
-            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600"
-          >
-            <ChevronLeft size={16} />
-            Back to Internships
+  if (!internship) {
+    return (
+      <div className="bg-[#F8FAFC] min-h-screen">
+        <Header />
+        <div className="max-w-6xl mx-auto px-4 py-12 text-center">
+          <h1 className="text-2xl font-bold text-[#0A2540]">Internship not found</h1>
+          <Link href="/internships" className="mt-4 inline-block text-[#10B981] hover:underline">
+            ← Back to internships
           </Link>
         </div>
       </div>
+    );
+  }
 
-      {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        
-        {/* Company Header */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              {job.companyLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={job.companyLogo}
-                  alt={job.company}
-                  loading="lazy"
-                  className="w-16 h-16 rounded-lg object-contain bg-gray-50 p-2"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
-                  <Building2 size={32} className="text-gray-400" />
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
-              <p className="text-gray-600 mt-1">{job.company}</p>
-              
-              <div className="flex flex-wrap gap-2 mt-3">
-                {job.workMode && (
-                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
-                    {job.workMode}
-                  </span>
-                )}
-                {job.internshipType && (
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
-                    {job.internshipType}
-                  </span>
-                )}
-                {job.category && (
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                    {job.category}
-                  </span>
-                )}
-                {job.verified && (
-                  <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
-                    <CheckCircle size={12} />
-                    Verified
-                  </span>
-                )}
+  return (
+    <div className="bg-[#F8FAFC] min-h-screen">
+      <Header />
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0A2540] transition-colors mb-6 group"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          Back to internships
+        </button>
+
+        {/* Main Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          
+          {/* Actively Hiring Banner */}
+          {internship.isActivelyHiring && (
+            <div className="bg-green-50 px-6 py-2 border-b border-green-100">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Actively hiring</span>
               </div>
             </div>
+          )}
 
-            <div className="flex gap-2">
-              <button 
-                onClick={handleShare}
-                className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-                title="Share"
-              >
-                <Share2 size={18} />
-              </button>
-              <button 
-                onClick={handleSave}
-                className="p-2 text-gray-400 hover:text-yellow-600 rounded-full hover:bg-yellow-50 transition-colors"
-                title="Save"
-              >
-                <Bookmark size={18} />
-              </button>
+          {/* Header Section */}
+          <div className="p-6 border-b border-slate-100">
+            <div className="flex flex-wrap justify-between items-start gap-4">
+              <div className="flex gap-4">
+                {/* Company Logo */}
+                <div className="w-16 h-16 bg-[#0A2540] rounded-xl flex items-center justify-center flex-shrink-0">
+                  {internship.companyLogo ? (
+                    <img src={internship.companyLogo} alt={internship.company} className="w-10 h-10 object-contain" />
+                  ) : (
+                    <span className="text-white font-bold text-lg">{internship.company?.substring(0,2).toUpperCase()}</span>
+                  )}
+                </div>
+                
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-black text-[#0A2540]">{internship.title}</h1>
+                    {internship.isVerified && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#10B981] bg-green-50 px-2 py-0.5 rounded-full">
+                        <CheckCircle size={12} /> Verified
+                      </span>
+                    )}
+                    {internship.isTrending && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                        <TrendingUp size={12} /> Trending
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-600 mt-1">{internship.company}</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  className={`p-2 rounded-lg border transition-all ${isSaved ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-slate-200 text-slate-400 hover:border-red-200 hover:text-red-500'}`}
+                >
+                  <Heart size={18} fill={isSaved ? "currentColor" : "none"} />
+                </button>
+                <button className="p-2 rounded-lg bg-white border border-slate-200 text-slate-400 hover:border-blue-200 hover:text-blue-500 transition-all">
+                  <Share2 size={18} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Company Overview */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                <Building2 size={18} className="text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Company Overview</h2>
-              </div>
-              <p className="text-gray-600 leading-relaxed">
-                {job.aboutCompany || `${job.company} is looking for talented interns to join their team.`}
-              </p>
-              {job.companyWebsite && (
-                <a
-                  href={job.companyWebsite}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mt-3"
-                >
-                  <Globe size={14} />
-                  Visit Website
-                </a>
-              )}
-            </div>
-            
-            {/* Internship Details */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                <Briefcase size={18} className="text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Internship Details</h2>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
-                    <MapPin size={12} />
-                    Location
-                  </p>
-                  <p className="font-medium text-gray-900">{job.location || "Not specified"}</p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
-                    <Clock size={12} />
-                    Duration
-                  </p>
-                  <p className="font-medium text-gray-900">{job.duration || "Not specified"}</p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
-                    <Wallet size={12} />
-                    Stipend
-                  </p>
-                  <p className={`font-medium ${job.paid ? 'text-green-600' : 'text-gray-500'}`}>
-                    {formatStipendDetail(job.stipendAmount, job.paid)}
-                  </p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
-                    <Calendar size={12} />
-                    Posted
-                  </p>
-                  <p className="font-medium text-gray-900">
-                    {new Date(job.createdAt).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <MapPin size={18} className="text-[#10B981]" />
+              <div>
+                <p className="text-xs text-slate-400">Location</p>
+                <p className="text-sm font-medium text-slate-700">{internship.location}</p>
               </div>
             </div>
-
-            {/* Job Description */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                <FileText size={18} className="text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Job Description</h2>
-              </div>
-              <div className="prose max-w-none">
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
-                  {job.description}
-                </p>
+            <div className="flex items-center gap-3">
+              <Briefcase size={18} className="text-[#10B981]" />
+              <div>
+                <p className="text-xs text-slate-400">Duration</p>
+                <p className="text-sm font-medium text-slate-700">{internship.duration}</p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <IndianRupee size={18} className="text-[#10B981]" />
+              <div>
+                <p className="text-xs text-slate-400">Stipend</p>
+                <p className="text-sm font-medium text-[#10B981]">{internship.stipend}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Calendar size={18} className="text-[#10B981]" />
+              <div>
+                <p className="text-xs text-slate-400">Posted on</p>
+                <p className="text-sm font-medium text-slate-700">{internship.postedAt}</p>
+              </div>
+            </div>
+          </div>
 
-            {/* Skills Required */}
-            {job.skills && job.skills.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                  <Code size={18} className="text-blue-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Skills Required</h2>
-                </div>
+          {/* Description Section */}
+          <div className="p-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-[#0A2540] mb-3">About the Internship</h2>
+              <p className="text-slate-600 text-sm leading-relaxed">{internship.description}</p>
+            </div>
+
+            {/* Responsibilities */}
+            {internship.responsibilities && internship.responsibilities.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-[#0A2540] mb-3">Key Responsibilities</h2>
+                <ul className="list-disc list-inside space-y-2 text-slate-600 text-sm">
+                  {internship.responsibilities.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Requirements */}
+            {internship.requirements && internship.requirements.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-[#0A2540] mb-3">Requirements</h2>
+                <ul className="list-disc list-inside space-y-2 text-slate-600 text-sm">
+                  {internship.requirements.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Skills */}
+            {internship.skills && internship.skills.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-[#0A2540] mb-3">Required Skills</h2>
                 <div className="flex flex-wrap gap-2">
-                  {job.skills.map((skill: string, i: number) => (
-                    <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg">
+                  {internship.skills.map((skill, i) => (
+                    <span key={i} className="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full">
                       {skill}
                     </span>
                   ))}
@@ -299,125 +241,62 @@ export default function InternshipDetailPage() {
               </div>
             )}
 
-            {/* Perks & Benefits */}
-            {job.perks && job.perks.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                  <Gift size={18} className="text-blue-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Perks & Benefits</h2>
+            {/* Additional Info */}
+            <div className="bg-slate-50 rounded-xl p-4 flex flex-wrap justify-between items-center gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Clock size={16} className="text-[#10B981]" />
+                  <span>Apply before {internship.deadline}</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {job.perks.map((perk: string, i: number) => (
-                    <span key={i} className="px-3 py-1.5 bg-green-50 text-green-700 text-sm rounded-lg">
-                      {perk}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Shield size={16} className="text-[#10B981]" />
+                  <span>{internship.openings} openings</span>
                 </div>
               </div>
-            )}
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Building2 size={16} />
+                <span>{internship.workType}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Right Column - Sidebar */}
-          <div className="space-y-6">
-            
-            {/* Apply Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-24">
-              <h3 className="font-semibold text-gray-900 mb-4">Ready to apply?</h3>
-              
-              {job.applyLink ? (
-                <a
-                  href={job.applyLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full mb-4 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  Apply Now
-                  <ExternalLink size={16} />
-                </a>
-              ) : (
-                <div className="text-center p-4 bg-gray-50 rounded-lg mb-4">
-                  <p className="text-sm text-gray-500">No application link available</p>
-                  <p className="text-xs text-gray-400 mt-1">Contact the company directly</p>
-                </div>
-              )}
-
-              <div className="space-y-3 pt-4 border-t border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-500">Posted on</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {new Date(job.createdAt).toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
-                
-                {job.applyBy && (
-                  <div>
-                    <p className="text-xs text-gray-500">Apply by</p>
-                    <p className="text-sm font-medium text-orange-600">
-                      {new Date(job.applyBy).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                )}
+          {/* Apply Section */}
+          <div className="p-6 border-t border-slate-100 bg-slate-50/30">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div>
+                <p className="text-xs text-slate-400">Ready to apply?</p>
+                <p className="text-sm text-slate-600">Don't miss this opportunity</p>
               </div>
-            </div>
-
-            {/* Company Info Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">About the Company</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Building2 size={16} className="text-gray-400" />
-                  <span className="text-sm text-gray-600">{job.company}</span>
-                </div>
-                {job.location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} className="text-gray-400" />
-                    <span className="text-sm text-gray-600">{job.location}</span>
-                  </div>
-                )}
-                {job.companyWebsite && (
-                  <a 
-                    href={job.companyWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    <Globe size={16} />
-                    Visit website
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Share Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Share this opportunity</h3>
               <button
-                onClick={handleShare}
-                className="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                onClick={handleApply}
+                className="bg-[#0A2540] hover:bg-[#0d2e52] text-white px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
               >
-                <Share2 size={14} />
-                Copy Link
+                Apply Now <ExternalLink size={14} />
               </button>
-            </div>
-
-            {/* Similar Internships Section */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Similar Internships</h3>
-              <p className="text-xs text-gray-500 text-center py-4">
-                More opportunities coming soon!
-              </p>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Similar Internships Section */}
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-[#0A2540] mb-6">Similar Internships</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-all">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                    <Building2 size={16} className="text-slate-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#0A2540]">Loading...</h3>
+                    <p className="text-xs text-slate-400">Similar opportunity</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

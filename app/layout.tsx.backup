@@ -87,6 +87,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* CACHE BUSTING META TAGS */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+        
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="/Internify.png" as="image" type="image/png" />
@@ -115,7 +120,7 @@ export default function RootLayout({
               "@type": "Organization",
               "name": "Internify",
               "url": "https://tryinternify.in",
-              "logo": "https://tryinternify.in/Internify.png",
+              "logo": "https://tryinternify.in/internify.png",
               "description": "Finance-focused internship platform connecting students with manually verified roles in Investment Banking, Equity Research, FinTech & more.",
               "foundingDate": "2026",
               "foundingLocation": "India",
@@ -151,7 +156,7 @@ export default function RootLayout({
               "@type": "WebSite",
               "name": "Internify",
               "url": "https://tryinternify.in",
-              "logo": "https://tryinternify.in/Internify.png",
+              "logo": "https://tryinternify.in/internify.png",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": {
