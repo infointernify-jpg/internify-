@@ -21,7 +21,7 @@ export default async function EditInternship({ params }: { params: { id: string 
     applyLink: internship.applyLink || "",
     eligibility: internship.eligibility || "",
     internshipType: internship.internshipType || "",
-    stipendType: internship.stipendType || "",
+    // stipendType: internship.stipendType || "",  // Removed - field doesn't exist
     openings: internship.openings || 0,
     startDate: internship.startDate || null,
     applyBy: internship.applyBy || null,
