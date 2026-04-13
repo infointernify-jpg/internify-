@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import slugify from 'slugify';
 
 export async function POST(req: Request) {
   try {
@@ -140,6 +141,7 @@ export async function POST(req: Request) {
         isTrending: isTrending || false,
         verified: verified || false,
         published: published !== false,
+        slug: slugify(`${title} ${company} ${Date.now()}`, { lower: true, strict: true }),
       },
     });
 

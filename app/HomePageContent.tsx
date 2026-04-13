@@ -175,7 +175,7 @@ export default function HomePageContent() {
   };
 
   const quickTags = [
-    { name: "Investment Banking", seoUrl: "/investment-banking-internships-india", icon: <TrendingUp size={14} className="mr-1" /> },
+    { name: "Investment Banking", seoUrl: "/investment-banking-internships", icon: <TrendingUp size={14} className="mr-1" /> },
     { name: "Equity Research", seoUrl: "/equity-research-internships", icon: <BarChart3 size={14} className="mr-1" /> },
     { name: "Financial Analyst", seoUrl: "/financial-analyst-internships", icon: <PieChart size={14} className="mr-1" /> },
     { name: "FinTech", seoUrl: "/fintech-internships", icon: <Activity size={14} className="mr-1" /> },
