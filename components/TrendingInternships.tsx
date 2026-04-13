@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  MapPin, Clock, IndianRupee, Building2,
+  MapPin, Clock, Building2,
   ChevronRight, Sparkles, Eye, Calendar, Briefcase, CheckCircle
 } from "lucide-react";
 
@@ -19,10 +19,11 @@ interface Internship {
   postedAt: string;
   isActivelyHiring: boolean;
   isVerified: boolean;
+  isTrending: boolean;
   companyLogo?: string | null;
   category: string;
   description: string;
-  shortDescription?: string | null; // Added shortDescription field
+  shortDescription?: string | null;
   workMode: string;
   createdAt: string;
   applyLink?: string;
@@ -47,33 +48,34 @@ const getLocationDisplay = (location: string, workMode: string) => {
   return `${cleanLocation} (On-site)`;
 };
 
-// Helper function to format stipend - FIXED: removes duplicate ₹ symbol
+// Helper function to format stipend - NO rupee icon, just number
 const formatStipend = (stipendAmount: string | null | undefined) => {
   if (!stipendAmount || stipendAmount === "Not Disclosed" || stipendAmount === "Not disclosed" || stipendAmount === "") {
     return "Not disclosed";
   }
   
-  // Clean the amount
-  let cleanAmount = stipendAmount.replace(/\/month$/, '').replace(/per month$/, '').trim();
+  // Clean the amount - remove any existing symbols
+  let cleanAmount = stipendAmount.replace(/\/month$/, '').replace(/per month$/, '').replace(/₹/g, '').trim();
   
-  // Remove any existing ₹ symbol to avoid duplication
-  cleanAmount = cleanAmount.replace(/₹/g, '').trim();
-  
-  // If it's a number, format it
+  // If it's a number, format it nicely
   if (!isNaN(Number(cleanAmount)) && cleanAmount !== "") {
     return `₹${Number(cleanAmount).toLocaleString()}/month`;
   }
   
-  // Add ₹ symbol and /month
+  // If it already has ₹ symbol, keep as is
+  if (stipendAmount.includes("₹")) {
+    return stipendAmount;
+  }
+  
+  // Add ₹ symbol
   return `₹${cleanAmount}/month`;
 };
 
-// Helper function to get description -优先使用 shortDescription
+// Helper function to get description - prioritizes shortDescription
 const getDescription = (job: Internship) => {
   // First try shortDescription
   if (job.shortDescription && job.shortDescription !== "") {
     let cleanText = job.shortDescription;
-    // Remove company name if present at beginning
     const patterns = [
       new RegExp(`^${job.company}\\s+(is\\s+)?(hiring|offering|looking for)\\s+`, 'i'),
       new RegExp(`^${job.company}\\s+`, 'i'),
@@ -139,7 +141,7 @@ export default function TrendingInternships() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/internships?trending=true&limit=6');
+      const res = await fetch('/api/internships?limit=20');
       
       if (!res.ok) {
         throw new Error(`Failed to fetch internships: ${res.status}`);
@@ -148,10 +150,9 @@ export default function TrendingInternships() {
       const data = await res.json();
       
       if (Array.isArray(data) && data.length > 0) {
-        console.log("First internship data:", data[0]);
-        console.log("Short description:", data[0]?.shortDescription);
-        console.log("Stipend amount:", data[0]?.stipendAmount);
-        setInternships(data);
+        // Only show internships where isTrending = true
+        const trendingOnly = data.filter((job: Internship) => job.isTrending === true);
+        setInternships(trendingOnly);
       } else {
         setInternships([]);
       }
@@ -212,15 +213,7 @@ export default function TrendingInternships() {
   }
 
   if (internships.length === 0) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center">
-          <Briefcase size={48} className="text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">No internships available</h3>
-          <p className="text-gray-500 text-sm">Check back later for new opportunities.</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -277,7 +270,7 @@ export default function TrendingInternships() {
                 </div>
               </div>
 
-              {/* Key Info Cards - Using stipendAmount with consistent format (FIXED duplicate rupee) */}
+              {/* Key Info Cards - Clean without rupee icon */}
               <div className="space-y-2.5 mb-4">
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -293,9 +286,10 @@ export default function TrendingInternships() {
                   <span className="text-xs text-slate-700 font-medium">{job.duration || "Flexible"}</span>
                 </div>
 
+                {/* Stipend - Clean text only */}
                 <div className="flex items-center gap-2 text-sm">
                   <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <IndianRupee size={13} className="text-green-600" />
+                    <span className="text-green-600 text-xs font-bold">₹</span>
                   </div>
                   <span className="text-xs font-bold text-green-700">
                     {formatStipend(job.stipendAmount)}
@@ -303,7 +297,7 @@ export default function TrendingInternships() {
                 </div>
               </div>
 
-              {/* Description - Uses shortDescription first, then description */}
+              {/* Description */}
               {(job.shortDescription || job.description) && (
                 <p className="text-xs text-slate-600 leading-relaxed mb-4">
                   {getDescription(job)}
