@@ -35,18 +35,18 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://tryinternify.in',
+    canonical: 'https://www.tryinternify.in',  // ✅ Fixed: Added www
   },
   openGraph: {
     title: 'Finance Internships in India (2026) | 150+ Open Roles in Investment Banking & FinTech',
     description: 'Verified finance internships in Investment Banking, Equity Research, FinTech & Financial Analysis. 100% free for students.',
-    url: 'https://tryinternify.in',
+    url: 'https://www.tryinternify.in',  // ✅ Fixed: Added www
     siteName: 'Internify',
     locale: 'en_IN',
     type: 'website',
     images: [
       {
-        url: 'https://tryinternify.in/og-image.png',
+        url: 'https://www.tryinternify.in/og-image.png',  // ✅ Fixed: Added www
         width: 1200,
         height: 630,
         alt: 'Internify - Finance Internships for Students',
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Finance Internships in India (2026) | 150+ Open Roles in Investment Banking & FinTech',
     description: 'Verified finance internships in Investment Banking, Equity Research, FinTech & Financial Analysis. 100% free.',
-    images: ['https://tryinternify.in/twitter-image.png'],
+    images: ['https://www.tryinternify.in/twitter-image.png'],  // ✅ Fixed: Added www
     creator: '@internify83656',
     site: '@internify83656',
   },
@@ -77,6 +77,9 @@ export const metadata: Metadata = {
     title: 'Internify',
     statusBarStyle: 'black-translucent',
   },
+  verification: {
+    google: 'pFMAqcI7R1rA_0xWzK7w5zl79-8RvsnoPfa7lOIdEHA',  // ✅ Add your Google Search Console verification code
+  },
 };
 
 export default function RootLayout({
@@ -87,26 +90,34 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Preconnect and Preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="/Internify.png" as="image" type="image/png" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://cdn.amplitude.com" />
         
+        {/* Security Headers */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
         <meta httpEquiv="X-Frame-Options" content="DENY" />
         <meta httpEquiv="X-XSS-Protection" content="1; mode=block" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
+        
+        {/* SEO Meta Tags */}
         <meta name="robots" content="index, follow" />
         <meta name="language" content="English" />
         <meta name="revisit-after" content="7 days" />
+        <meta name="geo.region" content="IN" />
+        <meta name="geo.placename" content="India" />
         
+        {/* Favicon Icons */}
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="manifest" href="/site.webmanifest" />
         
+        {/* Organization Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -114,8 +125,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "Internify",
-              "url": "https://tryinternify.in",
-              "logo": "https://tryinternify.in/Internify.png",
+              "url": "https://www.tryinternify.in",
+              "logo": "https://www.tryinternify.in/Internify.png",
               "description": "Finance-focused internship platform connecting students with manually verified roles in Investment Banking, Equity Research, FinTech & more.",
               "foundingDate": "2026",
               "foundingLocation": "India",
@@ -143,6 +154,7 @@ export default function RootLayout({
           }}
         />
         
+        {/* WebSite Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -150,16 +162,83 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "Internify",
-              "url": "https://tryinternify.in",
-              "logo": "https://tryinternify.in/Internify.png",
+              "url": "https://www.tryinternify.in",
+              "logo": "https://www.tryinternify.in/Internify.png",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": {
                   "@type": "EntryPoint",
-                  "urlTemplate": "https://tryinternify.in/internships?search={search_term}&location={location}"
+                  "urlTemplate": "https://www.tryinternify.in/internships?search={search_term}&location={location}"
                 },
                 "query-input": "required name=search_term"
               }
+            })
+          }}
+        />
+        
+        {/* LocalBusiness Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": "Internify",
+              "url": "https://www.tryinternify.in",
+              "logo": "https://www.tryinternify.in/Internify.png",
+              "description": "India's fastest-growing finance internship platform",
+              "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "IN"
+              },
+              "priceRange": "₹0",
+              "telephone": "+91-XXXXXXXXXX",
+              "email": "internifyhelp@gmail.com"
+            })
+          }}
+        />
+        
+        {/* FAQ Schema for Homepage */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "What types of finance internships are on Internify?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Investment Banking, Equity Research, Financial Analysis, FinTech, CA Articleship, Portfolio Management, Risk & Compliance, and Corporate Finance — all manually verified."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Is Internify free for students?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "100% free. No premium tiers, no pay-to-apply, no hidden fees. Companies pay to post — students never pay."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How are internships verified?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Every listing is manually reviewed — company confirmed, role checked, links tested. No ghost jobs."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Can I find remote finance internships?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes. Use the 'Remote' filter to find work-from-home roles in equity research, financial modeling, and FinTech."
+                  }
+                }
+              ]
             })
           }}
         />
@@ -172,6 +251,7 @@ export default function RootLayout({
           </NotificationProvider>
         </Providers>
         
+        {/* Google Analytics */}
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-CZM79LK7MR"
@@ -199,6 +279,7 @@ export default function RootLayout({
           }}
         />
         
+        {/* Amplitude Analytics */}
         <Script
           strategy="lazyOnload"
           src="https://cdn.amplitude.com/libs/amplitude-8.21.0-min.gz.js"
